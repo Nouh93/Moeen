@@ -79,8 +79,19 @@ ledger.balanceOf("wallet:m1"); // 5000 YER
 - [x] هيكل المستودع + إعدادات الـmonorepo
 - [x] القلب المالي: Money + دفتر القيد المزدوج (مُختبَر)
 - [x] مخطط بيانات Prisma (نطاق أساسي + دفتر الأستاذ)
-- [ ] خلفية NestJS: وحدات auth / merchants / catalog / orders
-- [ ] مستودع الدفتر فوق Prisma (كتابة القيود داخل معاملة)
+- [x] خلفية NestJS (هيكل + Prisma + فلتر أخطاء + health)
+- [x] مستودع الدفتر فوق Prisma (قيود داخل معاملة + قفل صفوف + idempotency)
+- [x] محفظة التاجر عبر REST (شحن/خصم/رصيد) — مُختبَرة تكاملياً وعبر HTTP
+- [ ] وحدات auth / merchants / catalog / orders
 - [ ] محرّك المطابقة (BullMQ) + دورة الإنذار
 - [ ] تكامل بوابات الدفع (MEPS / eSadad-WeNet) — بعد onboarding
 - [ ] واجهة Next.js PWA (متجر + لوحة تحكم التاجر)
+
+### تشغيل الخلفية محلياً
+
+```bash
+docker compose up -d                       # PostgreSQL + Redis
+cd apps/api && cp ../../.env.example .env   # اضبط DATABASE_URL
+pnpm prisma:deploy                          # تطبيق الـmigrations
+pnpm --filter @moeen/api start:dev          # تشغيل الخلفية
+```

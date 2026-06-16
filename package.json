@@ -1,0 +1,16 @@
+{
+  "name": "moeen",
+  "version": "0.1.0",
+  "private": true,
+  "description": "مُعين — منصة تجارة وتوصيل مصمّمة لليمن (Moeen — commerce & delivery platform built for Yemen)",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "typecheck": "pnpm -r typecheck",
+    "ledger:test": "pnpm --filter @moeen/ledger test"
+  }
+}

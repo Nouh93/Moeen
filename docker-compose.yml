@@ -1,0 +1,33 @@
+# بيئة التطوير المحلية لمُعين.
+# PostgreSQL لسلامة الفلوس (ACID)، وRedis لطوابير المهام (محرّك المطابقة/الإنذار).
+services:
+  postgres:
+    image: postgres:16
+    container_name: moeen-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moeen
+      POSTGRES_PASSWORD: moeen_dev
+      POSTGRES_DB: moeen
+    ports:
+      - "5432:5432"
+    volumes:
+      - moeen_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moeen"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    container_name: moeen-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - moeen_redisdata:/data
+
+volumes:
+  moeen_pgdata:
+  moeen_redisdata:

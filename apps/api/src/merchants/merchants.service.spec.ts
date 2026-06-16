@@ -4,6 +4,7 @@ import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AuthService } from "../auth/auth.service.js";
 import { LedgerService } from "../ledger/ledger.service.js";
+import { AccountsService } from "../ledger/accounts.service.js";
 import { WalletService } from "../wallet/wallet.service.js";
 import { MerchantsService } from "./merchants.service.js";
 
@@ -14,7 +15,8 @@ const prisma = new PrismaService();
 const jwt = new JwtService({ secret: "test-secret", signOptions: { expiresIn: "1h" } });
 const auth = new AuthService(prisma, jwt);
 const ledger = new LedgerService(prisma);
-const wallet = new WalletService(ledger);
+const accounts = new AccountsService(ledger);
+const wallet = new WalletService(ledger, accounts);
 const merchants = new MerchantsService(prisma, auth, wallet);
 
 async function reset(): Promise<void> {

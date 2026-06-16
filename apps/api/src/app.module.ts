@@ -8,6 +8,7 @@ import { StoresModule } from "./stores/stores.module.js";
 import { CustomersModule } from "./customers/customers.module.js";
 import { OrdersModule } from "./orders/orders.module.js";
 import { ShippingModule } from "./shipping/shipping.module.js";
+import { BillingModule } from "./billing/billing.module.js";
 import { HealthController } from "./health/health.controller.js";
 
 @Module({
@@ -21,6 +22,7 @@ import { HealthController } from "./health/health.controller.js";
     CustomersModule,
     OrdersModule,
     ShippingModule,
+    BillingModule,
   ],
   controllers: [HealthController],
 })

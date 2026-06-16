@@ -26,6 +26,10 @@ export class AccountsService {
     await this.ledger.ensureAccount({ code: PlatformAccounts.PAYABLE_ACQUIRER, type: "LIABILITY" });
     await this.ledger.ensureAccount({ code: PlatformAccounts.REVENUE_COMMISSION, type: "REVENUE" });
     await this.ledger.ensureAccount({ code: PlatformAccounts.REVENUE_COLLECTION, type: "REVENUE" });
+    await this.ledger.ensureAccount({
+      code: PlatformAccounts.REVENUE_SUBSCRIPTION,
+      type: "REVENUE",
+    });
     await this.ledger.ensureAccount({ code: PlatformAccounts.EXPENSE_MDR, type: "EXPENSE" });
   }
 

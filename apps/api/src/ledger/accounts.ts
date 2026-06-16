@@ -21,6 +21,7 @@ export const PlatformAccounts = {
   PAYABLE_ACQUIRER: "payable:acquirer",
   REVENUE_COMMISSION: "revenue:commission",
   REVENUE_COLLECTION: "revenue:collection",
+  REVENUE_SUBSCRIPTION: "revenue:subscription",
   EXPENSE_MDR: "expense:mdr",
 } as const;
 

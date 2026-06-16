@@ -82,7 +82,9 @@ ledger.balanceOf("wallet:m1"); // 5000 YER
 - [x] خلفية NestJS (هيكل + Prisma + فلتر أخطاء + health)
 - [x] مستودع الدفتر فوق Prisma (قيود داخل معاملة + قفل صفوف + idempotency)
 - [x] محفظة التاجر عبر REST (شحن/خصم/رصيد) — مُختبَرة تكاملياً وعبر HTTP
-- [ ] وحدات auth / merchants / catalog / orders
+- [x] المصادقة: تسجيل/دخول بالجوال + JWT + حارس + تحقّق مدخلات
+- [x] التجار: onboarding ينشئ المستخدم والتاجر وحسابات المحفظة آلياً
+- [ ] وحدات catalog / orders / shipping
 - [ ] محرّك المطابقة (BullMQ) + دورة الإنذار
 - [ ] تكامل بوابات الدفع (MEPS / eSadad-WeNet) — بعد onboarding
 - [ ] واجهة Next.js PWA (متجر + لوحة تحكم التاجر)

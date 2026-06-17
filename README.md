@@ -27,7 +27,8 @@ moeen/
 ├─ packages/
 │  └─ ledger/         ← القلب المالي: Money + دفتر القيد المزدوج (مُختبَر)
 ├─ apps/
-│  └─ api/            ← الخلفية (Prisma schema حالياً؛ NestJS قادم)
+│  ├─ api/            ← الخلفية (NestJS + Prisma)
+│  └─ web/            ← الواجهة (Next.js PWA تعمل أوفلاين)
 ├─ docker-compose.yml ← PostgreSQL + Redis للتطوير
 └─ pnpm-workspace.yaml
 ```
@@ -87,9 +88,10 @@ ledger.balanceOf("wallet:m1"); // 5000 YER
 - [x] المتاجر والعملاء (إنشاء أساسي)
 - [x] الطلبات والشحن: حجز/خصم/تحرير + تسوية COD وإلكتروني + waterfall (ADR 0003)
 - [x] محرّك المطابقة (BullMQ) + دورة الإنذار + تحصيل الاشتراكات (ADR 0004)
-- [ ] catalog (منتجات) كامل + لوحة تحكم
-- [ ] تكامل بوابات الدفع الفعلي (MEPS / eSadad-WeNet) — بعد onboarding
-- [ ] واجهة Next.js PWA
+- [x] catalog (منتجات) + تسعير طلب موثوق من الخادم
+- [x] واجهة Next.js PWA: تسجيل/دخول التاجر، لوحة تحكم (محفظة/متاجر/منتجات/طلبات)،
+      واجهة متجر عامة مع سلة ودفع، ودعم أوفلاين (service worker + manifest)
+- [ ] تكامل بوابات الدفع الفعلي (MEPS / eSadad-WeNet) — بعد onboarding تجاري
 - [ ] تكامل بوابات الدفع (MEPS / eSadad-WeNet) — بعد onboarding
 - [ ] واجهة Next.js PWA (متجر + لوحة تحكم التاجر)
 

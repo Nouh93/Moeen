@@ -117,6 +117,19 @@ export class OrdersService {
     if (!order) throw new NotFoundException("الطلب غير موجود");
     return order;
   }
+
+  /** طلبات تاجر (عبر متاجره) — للوحة التحكم. */
+  async listByMerchant(merchantId: string) {
+    return this.prisma.order.findMany({
+      where: { store: { merchantId } },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        items: true,
+        shipment: { select: { status: true, waybillNumber: true } },
+      },
+    });
+  }
 }
 
 /** يستبعد السطور ذات المبلغ صفر (محرّك الدفتر يتطلّب مبالغ موجبة فقط). */

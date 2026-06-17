@@ -1,0 +1,19 @@
+{
+  "name": "مُعين — منصة تجارة وتوصيل",
+  "short_name": "مُعين",
+  "description": "منصة تجارة وتوصيل مصمّمة لليمن",
+  "lang": "ar",
+  "dir": "rtl",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f7f9",
+  "theme_color": "#0e7c5a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

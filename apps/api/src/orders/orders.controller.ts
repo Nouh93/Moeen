@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { OrdersService } from "./orders.service.js";
 import { PlaceOrderDto } from "./dto.js";
@@ -11,6 +11,11 @@ export class OrdersController {
   @Post()
   place(@Body() dto: PlaceOrderDto) {
     return this.orders.place(dto);
+  }
+
+  @Get()
+  list(@Query("merchantId") merchantId: string) {
+    return this.orders.listByMerchant(merchantId);
   }
 
   @Get(":id")

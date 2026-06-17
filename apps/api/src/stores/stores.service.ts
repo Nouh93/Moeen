@@ -29,4 +29,11 @@ export class StoresService {
     if (!store) throw new NotFoundException("المتجر غير موجود");
     return store;
   }
+
+  async listByMerchant(merchantId: string): Promise<Store[]> {
+    return this.prisma.store.findMany({
+      where: { merchantId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
 }

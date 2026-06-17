@@ -46,6 +46,12 @@ export class MerchantsService {
     return { ...this.auth.issue(user), merchantId: merchant.id };
   }
 
+  async findByUserId(userId: string) {
+    const merchant = await this.prisma.merchant.findUnique({ where: { userId } });
+    if (!merchant) throw new NotFoundException("لا يوجد حساب تاجر لهذا المستخدم");
+    return this.findById(merchant.id);
+  }
+
   async findById(id: string) {
     const merchant = await this.prisma.merchant.findUnique({
       where: { id },

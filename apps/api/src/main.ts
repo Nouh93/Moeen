@@ -10,7 +10,8 @@ import { LedgerExceptionFilter } from "./common/ledger-exception.filter.js";
 };
 
 async function bootstrap(): Promise<void> {
-  const app = await NestFactory.create(AppModule);
+  // rawBody مطلوب للتحقّق من توقيع الـwebhook قبل تحليل JSON.
+  const app = await NestFactory.create(AppModule, { rawBody: true });
   app.enableCors({ origin: true, credentials: true });
   app.useGlobalPipes(
     new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),

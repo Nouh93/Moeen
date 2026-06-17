@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { BullModule } from "@nestjs/bullmq";
 import { ScheduleModule } from "@nestjs/schedule";
 import { LedgerModule } from "../ledger/ledger.module.js";
+import { GatewayRegistry } from "../payments/gateway.registry.js";
 import { SubscriptionsService } from "./subscriptions.service.js";
 import { ReconciliationService } from "./reconciliation.service.js";
 import { DunningService } from "./dunning.service.js";
@@ -30,6 +31,7 @@ const queueProviders = queueEnabled() ? [PaymentsProcessor] : [];
     DunningService,
     PaymentIngestService,
     BillingScheduler,
+    GatewayRegistry,
     ...queueProviders,
   ],
   exports: [SubscriptionsService, ReconciliationService, DunningService],

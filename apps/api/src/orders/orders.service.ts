@@ -30,10 +30,26 @@ export class OrdersService {
     await this.accounts.ensurePlatform();
     await this.accounts.ensureMerchant(merchantId);
 
-    const subtotal = dto.items.reduce(
-      (sum, it) => sum + BigInt(it.unitPriceMinor) * BigInt(it.quantity),
-      0n,
+    // تسعير موثوق من الخادم: إن وُجد productId يُؤخذ السعر والاسم من قاعدة البيانات
+    // (لا نثق بسعر العميل). وإلا يُستخدم المُرسَل (للاختبار/الطلبات اليدوية).
+    const lines = await Promise.all(
+      dto.items.map(async (it) => {
+        if (it.productId) {
+          const product = await this.prisma.product.findFirst({
+            where: { id: it.productId, storeId: dto.storeId, isActive: true },
+          });
+          if (!product) throw new NotFoundException(`المنتج غير موجود: ${it.productId}`);
+          return { name: product.name, unitPriceMinor: product.priceMinor, quantity: it.quantity, productId: product.id };
+        }
+        return {
+          name: it.name,
+          unitPriceMinor: BigInt(it.unitPriceMinor),
+          quantity: it.quantity,
+          productId: undefined as string | undefined,
+        };
+      }),
     );
+    const subtotal = lines.reduce((sum, l) => sum + l.unitPriceMinor * BigInt(l.quantity), 0n);
     const merchantPaysShipping = dto.merchantPaysShipping ?? store.merchantPaysShipping;
     const customerPaysShipping = !merchantPaysShipping;
     const shipping = BigInt(dto.shippingMinor);
@@ -49,11 +65,11 @@ export class OrdersService {
         totalMinor: total,
         merchantPaysShipping,
         items: {
-          create: dto.items.map((it) => ({
-            productId: it.productId ?? "00000000-0000-0000-0000-000000000000",
-            nameSnapshot: it.name,
-            unitPriceMinor: BigInt(it.unitPriceMinor),
-            quantity: it.quantity,
+          create: lines.map((l) => ({
+            productId: l.productId ?? "00000000-0000-0000-0000-000000000000",
+            nameSnapshot: l.name,
+            unitPriceMinor: l.unitPriceMinor,
+            quantity: l.quantity,
           })),
         },
       },

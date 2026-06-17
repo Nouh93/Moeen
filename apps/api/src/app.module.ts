@@ -6,6 +6,7 @@ import { WalletModule } from "./wallet/wallet.module.js";
 import { MerchantsModule } from "./merchants/merchants.module.js";
 import { StoresModule } from "./stores/stores.module.js";
 import { CustomersModule } from "./customers/customers.module.js";
+import { CatalogModule } from "./catalog/catalog.module.js";
 import { OrdersModule } from "./orders/orders.module.js";
 import { ShippingModule } from "./shipping/shipping.module.js";
 import { BillingModule } from "./billing/billing.module.js";
@@ -20,6 +21,7 @@ import { HealthController } from "./health/health.controller.js";
     MerchantsModule,
     StoresModule,
     CustomersModule,
+    CatalogModule,
     OrdersModule,
     ShippingModule,
     BillingModule,

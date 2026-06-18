@@ -7,6 +7,7 @@ import { LedgerService } from "../ledger/ledger.service.js";
 import { AccountsService } from "../ledger/accounts.service.js";
 import { WalletService } from "../wallet/wallet.service.js";
 import { MerchantsService } from "../merchants/merchants.service.js";
+import { SubscriptionsService } from "../billing/subscriptions.service.js";
 import { OrdersService } from "../orders/orders.service.js";
 import { PricingService } from "../orders/pricing.js";
 import { ShippingService } from "./shipping.service.js";
@@ -27,7 +28,8 @@ const ledger = new LedgerService(prisma);
 const accounts = new AccountsService(ledger);
 const wallet = new WalletService(ledger, accounts);
 const pricing = new PricingService();
-const merchants = new MerchantsService(prisma, auth, wallet);
+const subscriptions = new SubscriptionsService(prisma, ledger, accounts);
+const merchants = new MerchantsService(prisma, auth, wallet, subscriptions);
 const orders = new OrdersService(prisma, ledger, accounts, pricing);
 const shipping = new ShippingService(prisma, ledger, accounts, pricing);
 
@@ -40,6 +42,8 @@ async function reset(): Promise<void> {
   await prisma.orderItem.deleteMany();
   await prisma.shipment.deleteMany();
   await prisma.order.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.subscription.deleteMany();
   await prisma.store.deleteMany();
   await prisma.merchant.deleteMany();
   await prisma.customer.deleteMany();

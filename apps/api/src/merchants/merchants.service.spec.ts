@@ -6,6 +6,7 @@ import { AuthService } from "../auth/auth.service.js";
 import { LedgerService } from "../ledger/ledger.service.js";
 import { AccountsService } from "../ledger/accounts.service.js";
 import { WalletService } from "../wallet/wallet.service.js";
+import { SubscriptionsService } from "../billing/subscriptions.service.js";
 import { MerchantsService } from "./merchants.service.js";
 
 const hasDb = !!process.env.DATABASE_URL;
@@ -17,12 +18,15 @@ const auth = new AuthService(prisma, jwt);
 const ledger = new LedgerService(prisma);
 const accounts = new AccountsService(ledger);
 const wallet = new WalletService(ledger, accounts);
-const merchants = new MerchantsService(prisma, auth, wallet);
+const subscriptions = new SubscriptionsService(prisma, ledger, accounts);
+const merchants = new MerchantsService(prisma, auth, wallet, subscriptions);
 
 async function reset(): Promise<void> {
   await prisma.ledgerPosting.deleteMany();
   await prisma.journalEntry.deleteMany();
   await prisma.ledgerAccount.deleteMany();
+  await prisma.invoice.deleteMany();
+  await prisma.subscription.deleteMany();
   await prisma.store.deleteMany();
   await prisma.merchant.deleteMany();
   await prisma.user.deleteMany();

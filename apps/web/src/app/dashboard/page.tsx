@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { api, clearToken, formatYER, getToken } from "@/lib/api";
 
 interface StoreInfo { id: string; name: string; slug: string; merchantPaysShipping: boolean }
+interface Subscription { status: string; priceMinor: string }
 interface Merchant {
   id: string;
   businessName: string;
@@ -12,6 +13,7 @@ interface Merchant {
   governorate: string;
   walletBalanceMinor: string;
   store: StoreInfo | null;
+  subscription: Subscription | null;
 }
 interface Product { id: string; name: string; priceMinor: string; stock: number; isActive: boolean }
 interface Order {
@@ -84,6 +86,15 @@ export default function DashboardPage() {
         <span className={`badge ${merchant.status === "ACTIVE" ? "ok" : "warn"}`}>
           {statusLabel(merchant.status)}
         </span>
+        {merchant.subscription && (
+          <>
+            {" · "}
+            اشتراك: {formatYER(merchant.subscription.priceMinor)}/شهر{" "}
+            <span className={`badge ${merchant.subscription.status === "ACTIVE" ? "ok" : "warn"}`}>
+              {subStatusLabel(merchant.subscription.status)}
+            </span>
+          </>
+        )}
       </p>
 
       {error && <p className="error">{error}</p>}
@@ -125,10 +136,19 @@ export default function DashboardPage() {
           <h2>المنتجات</h2>
           <div className="grid">
             {products.map((p) => (
-              <div key={p.id} className="item">
+              <div key={p.id} className="item" style={{ opacity: p.isActive ? 1 : 0.55 }}>
                 <strong>{p.name}</strong>
                 <span className="price">{formatYER(p.priceMinor)}</span>
                 <span className="muted">المخزون: {p.stock}</span>
+                <button
+                  className="secondary"
+                  onClick={async () => {
+                    await api.patch(`/products/${p.id}`, { isActive: !p.isActive });
+                    flash(p.isActive ? "عُطّل المنتج" : "فُعّل المنتج");
+                  }}
+                >
+                  {p.isActive ? "تعطيل" : "تفعيل"}
+                </button>
               </div>
             ))}
             {products.length === 0 && <p className="muted">لا توجد منتجات بعد — أضف أول منتج.</p>}
@@ -147,7 +167,7 @@ export default function DashboardPage() {
                 <th>الإجمالي</th>
                 <th>الدفع</th>
                 <th>الحالة</th>
-                <th>الشحنة</th>
+                <th>إجراء</th>
               </tr>
             </thead>
             <tbody>
@@ -156,7 +176,9 @@ export default function DashboardPage() {
                   <td>{formatYER(o.totalMinor)}</td>
                   <td>{o.paymentMethod === "COD" ? "عند الاستلام" : "إلكتروني"}</td>
                   <td>{statusLabel(o.status)}</td>
-                  <td>{o.shipment ? o.shipment.waybillNumber : "—"}</td>
+                  <td>
+                    <OrderActions order={o} onDone={flash} />
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -234,6 +256,54 @@ function AddProduct({ storeId, onDone }: { storeId: string; onDone: () => void }
       </button>
     </div>
   );
+}
+
+function OrderActions({ order, onDone }: { order: Order; onDone: (m: string) => void }) {
+  const [busy, setBusy] = useState(false);
+  const ship = order.shipment;
+  async function call(path: string, ok: string) {
+    setBusy(true);
+    try {
+      await api.post(`/orders/${order.id}/shipment/${path}`);
+      onDone(ok);
+    } catch (e) {
+      onDone((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (order.status === "DELIVERED") return <span className="muted">✓ تم</span>;
+  if (order.status === "CANCELLED") return <span className="muted">—</span>;
+  if (!ship) {
+    return (
+      <button disabled={busy} onClick={() => call("waybill", "أُنشئت البوليصة")}>
+        إنشاء بوليصة
+      </button>
+    );
+  }
+  if (ship.status === "CREATED") {
+    return (
+      <div className="row" style={{ gap: 6 }}>
+        <button disabled={busy} onClick={() => call("deliver", "تم تأكيد التسليم")}>
+          تأكيد التسليم
+        </button>
+        <button className="secondary" disabled={busy} onClick={() => call("cancel", "أُلغيت البوليصة")}>
+          إلغاء
+        </button>
+      </div>
+    );
+  }
+  return <span className="muted">{ship.waybillNumber}</span>;
+}
+
+function subStatusLabel(s: string): string {
+  const map: Record<string, string> = {
+    ACTIVE: "نشط",
+    PAST_DUE: "متأخّر",
+    SUSPENDED: "موقوف",
+    CANCELLED: "ملغى",
+  };
+  return map[s] ?? s;
 }
 
 function statusLabel(s: string): string {

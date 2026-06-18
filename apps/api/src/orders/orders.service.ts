@@ -118,6 +118,25 @@ export class OrdersService {
     return order;
   }
 
+  /** تتبّع طلب — معلومات عامة محدودة للزبون (بمعرّف الطلب). */
+  async track(id: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        paymentMethod: true,
+        totalMinor: true,
+        createdAt: true,
+        store: { select: { name: true } },
+        shipment: { select: { status: true, waybillNumber: true } },
+        items: { select: { nameSnapshot: true, quantity: true, unitPriceMinor: true } },
+      },
+    });
+    if (!order) throw new NotFoundException("الطلب غير موجود");
+    return order;
+  }
+
   /** طلبات تاجر (عبر متاجره) — للوحة التحكم. */
   async listByMerchant(merchantId: string) {
     return this.prisma.order.findMany({

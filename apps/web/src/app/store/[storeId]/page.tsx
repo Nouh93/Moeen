@@ -50,7 +50,14 @@ export default function StorefrontPage() {
         <p className="muted">رقم الطلب:</p>
         <p style={{ fontFamily: "monospace" }}>{done}</p>
         <p className="muted">سيتواصل معك المتجر لتأكيد التوصيل.</p>
-        <button onClick={() => { setDone(""); setCart({}); }}>طلب جديد</button>
+        <div className="row" style={{ justifyContent: "center" }}>
+          <a href={`/track/${done}`}>
+            <button>تتبّع الطلب</button>
+          </a>
+          <button className="secondary" onClick={() => { setDone(""); setCart({}); }}>
+            طلب جديد
+          </button>
+        </div>
       </div>
     );
   }

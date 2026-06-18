@@ -3,7 +3,11 @@ import { randomUUID } from "node:crypto";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AuthService, type AuthResult } from "../auth/auth.service.js";
 import { WalletService } from "../wallet/wallet.service.js";
+import { SubscriptionsService } from "../billing/subscriptions.service.js";
 import type { OnboardMerchantDto } from "./dto.js";
+
+/** سعر الاشتراك الشهري الافتراضي (ريال يمني). قابل للضبط لاحقاً. */
+const DEFAULT_SUBSCRIPTION_PRICE = 5000n;
 
 @Injectable()
 export class MerchantsService {
@@ -11,6 +15,7 @@ export class MerchantsService {
     private readonly prisma: PrismaService,
     private readonly auth: AuthService,
     private readonly wallet: WalletService,
+    private readonly subscriptions: SubscriptionsService,
   ) {}
 
   /**
@@ -52,8 +57,9 @@ export class MerchantsService {
       return { user, merchant, store };
     });
 
-    // تهيئة حسابات المحفظة في الدفتر (idempotent).
+    // تهيئة حسابات المحفظة في الدفتر (idempotent) + إنشاء اشتراك شهري نشط.
     await this.wallet.ensureAccounts(merchant.id);
+    await this.subscriptions.createSubscription(merchant.id, DEFAULT_SUBSCRIPTION_PRICE);
 
     return { ...this.auth.issue(user), merchantId: merchant.id, storeId: store.id };
   }
@@ -78,9 +84,21 @@ export class MerchantsService {
     });
     if (!merchant) throw new NotFoundException("التاجر غير موجود");
     const balanceMinor = await this.wallet.balance(id).catch(() => 0n);
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { merchantId: id },
+      orderBy: { createdAt: "desc" },
+      select: { status: true, priceMinor: true },
+    });
     const { stores, ...rest } = merchant;
     // تاجر = متجر واحد: نُعيد المتجر الوحيد مباشرةً.
-    return { ...rest, store: stores[0] ?? null, walletBalanceMinor: balanceMinor.toString() };
+    return {
+      ...rest,
+      store: stores[0] ?? null,
+      walletBalanceMinor: balanceMinor.toString(),
+      subscription: subscription
+        ? { status: subscription.status, priceMinor: subscription.priceMinor.toString() }
+        : null,
+    };
   }
 
   async list() {

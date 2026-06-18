@@ -4,31 +4,29 @@ import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, clearToken, formatYER, getToken } from "@/lib/api";
 
+interface StoreInfo { id: string; name: string; slug: string; merchantPaysShipping: boolean }
 interface Merchant {
   id: string;
   businessName: string;
   status: string;
   governorate: string;
   walletBalanceMinor: string;
+  store: StoreInfo | null;
 }
-interface Store { id: string; name: string; merchantPaysShipping: boolean }
-interface Product { id: string; name: string; priceMinor: string; stock: number }
+interface Product { id: string; name: string; priceMinor: string; stock: number; isActive: boolean }
 interface Order {
   id: string;
   status: string;
   paymentMethod: string;
   totalMinor: string;
-  createdAt: string;
   shipment?: { status: string; waybillNumber: string } | null;
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const [merchant, setMerchant] = useState<Merchant | null>(null);
-  const [stores, setStores] = useState<Store[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [activeStore, setActiveStore] = useState<string>("");
+  const [orders, setOrders] = useState<Order[]>([]);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
@@ -36,17 +34,16 @@ export default function DashboardPage() {
     try {
       const m = await api.get<Merchant>("/merchants/me");
       setMerchant(m);
-      const [s, o] = await Promise.all([
-        api.get<Store[]>(`/merchants/${m.id}/stores`),
+      const [o, p] = await Promise.all([
         api.get<Order[]>(`/orders?merchantId=${m.id}`),
+        m.store ? api.get<Product[]>(`/stores/${m.store.id}/products?all=1`) : Promise.resolve([]),
       ]);
-      setStores(s);
       setOrders(o);
-      if (s[0] && !activeStore) setActiveStore(s[0].id);
+      setProducts(p);
     } catch (err) {
       setError((err as Error).message);
     }
-  }, [activeStore]);
+  }, []);
 
   useEffect(() => {
     if (!getToken()) {
@@ -57,31 +54,22 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (!activeStore) return;
-    void api.get<Product[]>(`/stores/${activeStore}/products?all=1`).then(setProducts).catch(() => {});
-  }, [activeStore, msg]);
-
   function logout() {
     clearToken();
     router.push("/login");
   }
 
-  async function action(fn: () => Promise<unknown>, ok: string) {
+  function flash(m: string) {
+    setMsg(m);
     setError("");
-    setMsg("");
-    try {
-      await fn();
-      setMsg(ok);
-      await load();
-    } catch (err) {
-      setError((err as Error).message);
-    }
+    void load();
   }
 
   if (!merchant) {
     return <p className="muted">جارٍ التحميل… {error && <span className="error">{error}</span>}</p>;
   }
+  const store = merchant.store;
+  const storeUrl = store ? `${window.location.origin}/store/${store.id}` : "";
 
   return (
     <div>
@@ -104,40 +92,38 @@ export default function DashboardPage() {
       <div className="card">
         <h2>المحفظة</h2>
         <div className="stat">{formatYER(merchant.walletBalanceMinor)}</div>
-        <TopUp merchantId={merchant.id} onDone={(m) => action(async () => {}, m)} reload={load} />
+        <TopUp merchantId={merchant.id} reload={load} />
       </div>
 
-      <div className="card">
-        <h2>المتاجر</h2>
-        {stores.length === 0 && <p className="muted">لا توجد متاجر بعد — أنشئ متجرك الأول.</p>}
-        <div className="grid">
-          {stores.map((s) => (
-            <div key={s.id} className="item">
-              <strong>{s.name}</strong>
-              <span className="muted">
-                الشحن: {s.merchantPaysShipping ? "على التاجر" : "على العميل"}
-              </span>
-              <a className="muted" href={`/store/${s.id}`} target="_blank" rel="noreferrer">
-                رابط المتجر للزبائن ↗
-              </a>
-            </div>
-          ))}
+      {store && (
+        <div className="card">
+          <h2>متجري</h2>
+          <p>
+            <a href={`/store/${store.id}`} target="_blank" rel="noreferrer">
+              فتح صفحة المتجر ↗
+            </a>
+          </p>
+          <label>رابط متجرك (شاركه مع زبائنك)</label>
+          <input readOnly value={storeUrl} onFocus={(e) => e.currentTarget.select()} />
+          <label className="row" style={{ marginTop: 12, gap: 6 }}>
+            <input
+              type="checkbox"
+              style={{ width: 18 }}
+              checked={store.merchantPaysShipping}
+              onChange={async (e) => {
+                await api.patch(`/stores/${store.id}`, { merchantPaysShipping: e.target.checked });
+                flash("حُفظ إعداد الشحن");
+              }}
+            />
+            أتحمّل أنا تكلفة الشحن (توصيل مجاني للزبون)
+          </label>
         </div>
-        <CreateStore merchantId={merchant.id} reload={load} />
-      </div>
+      )}
 
-      {stores.length > 0 && (
+      {store && (
         <div className="card">
           <h2>المنتجات</h2>
-          <label>اختر المتجر</label>
-          <select value={activeStore} onChange={(e) => setActiveStore(e.target.value)}>
-            {stores.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name}
-              </option>
-            ))}
-          </select>
-          <div className="grid" style={{ marginTop: 12 }}>
+          <div className="grid">
             {products.map((p) => (
               <div key={p.id} className="item">
                 <strong>{p.name}</strong>
@@ -145,8 +131,9 @@ export default function DashboardPage() {
                 <span className="muted">المخزون: {p.stock}</span>
               </div>
             ))}
+            {products.length === 0 && <p className="muted">لا توجد منتجات بعد — أضف أول منتج.</p>}
           </div>
-          <AddProduct storeId={activeStore} onDone={() => setMsg("أُضيف المنتج")} />
+          <AddProduct storeId={store.id} onDone={() => flash("أُضيف المنتج")} />
         </div>
       )}
 
@@ -169,7 +156,7 @@ export default function DashboardPage() {
                   <td>{formatYER(o.totalMinor)}</td>
                   <td>{o.paymentMethod === "COD" ? "عند الاستلام" : "إلكتروني"}</td>
                   <td>{statusLabel(o.status)}</td>
-                  <td>{o.shipment ? `${o.shipment.waybillNumber}` : "—"}</td>
+                  <td>{o.shipment ? o.shipment.waybillNumber : "—"}</td>
                 </tr>
               ))}
             </tbody>
@@ -180,7 +167,7 @@ export default function DashboardPage() {
   );
 }
 
-function TopUp({ merchantId, reload }: { merchantId: string; onDone?: (m: string) => void; reload: () => Promise<void> }) {
+function TopUp({ merchantId, reload }: { merchantId: string; reload: () => Promise<void> }) {
   const [amount, setAmount] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
@@ -212,39 +199,6 @@ function TopUp({ merchantId, reload }: { merchantId: string; onDone?: (m: string
         شحن المحفظة
       </button>
       {err && <span className="error">{err}</span>}
-    </div>
-  );
-}
-
-function CreateStore({ merchantId, reload }: { merchantId: string; reload: () => Promise<void> }) {
-  const [name, setName] = useState("");
-  const [merchantPays, setMerchantPays] = useState(false);
-  const [busy, setBusy] = useState(false);
-  async function go() {
-    setBusy(true);
-    try {
-      await api.post(`/merchants/${merchantId}/stores`, { name, merchantPaysShipping: merchantPays });
-      setName("");
-      await reload();
-    } finally {
-      setBusy(false);
-    }
-  }
-  return (
-    <div className="row" style={{ marginTop: 12 }}>
-      <input style={{ maxWidth: 220 }} placeholder="اسم المتجر" value={name} onChange={(e) => setName(e.target.value)} />
-      <label className="row" style={{ margin: 0, gap: 6 }}>
-        <input
-          type="checkbox"
-          style={{ width: 18 }}
-          checked={merchantPays}
-          onChange={(e) => setMerchantPays(e.target.checked)}
-        />
-        التاجر يتحمّل الشحن
-      </label>
-      <button onClick={go} disabled={busy || !name}>
-        إضافة متجر
-      </button>
     </div>
   );
 }

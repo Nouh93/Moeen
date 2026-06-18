@@ -36,4 +36,20 @@ export class StoresService {
       orderBy: { createdAt: "desc" },
     });
   }
+
+  async update(
+    id: string,
+    input: { name?: string; merchantPaysShipping?: boolean },
+  ): Promise<Store> {
+    await this.findById(id);
+    return this.prisma.store.update({
+      where: { id },
+      data: {
+        ...(input.name !== undefined ? { name: input.name } : {}),
+        ...(input.merchantPaysShipping !== undefined
+          ? { merchantPaysShipping: input.merchantPaysShipping }
+          : {}),
+      },
+    });
+  }
 }

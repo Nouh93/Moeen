@@ -23,6 +23,7 @@ async function reset(): Promise<void> {
   await prisma.ledgerPosting.deleteMany();
   await prisma.journalEntry.deleteMany();
   await prisma.ledgerAccount.deleteMany();
+  await prisma.store.deleteMany();
   await prisma.merchant.deleteMany();
   await prisma.user.deleteMany();
 }
@@ -43,11 +44,16 @@ const dto = {
 d("MerchantsService — onboarding متكامل", () => {
   beforeEach(reset);
 
-  it("ينشئ مستخدماً وتاجراً وحسابات محفظة ويُصدر توكناً صالحاً", async () => {
+  it("ينشئ مستخدماً وتاجراً ومتجراً وحسابات محفظة ويُصدر توكناً صالحاً", async () => {
     const result = await merchants.onboard(dto);
 
     expect(result.user.role).toBe("MERCHANT");
     expect(result.merchantId).toBeTruthy();
+    expect(result.storeId).toBeTruthy();
+    // تاجر = متجر واحد يُنشأ تلقائياً.
+    expect(await prisma.store.count({ where: { merchantId: result.merchantId } })).toBe(1);
+    const fetchedMerchant = await merchants.findById(result.merchantId);
+    expect(fetchedMerchant.store?.id).toBe(result.storeId);
     // التوكن صالح ويحمل هوية التاجر.
     const payload = auth.verify(result.accessToken);
     expect(payload.phone).toBe(dto.phone);

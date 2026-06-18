@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { IsBoolean, IsOptional, IsString, MinLength } from "class-validator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { StoresService } from "./stores.service.js";
@@ -13,6 +13,17 @@ class CreateStoreDto {
   merchantPaysShipping?: boolean;
 }
 
+class UpdateStoreDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(1)
+  name?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  merchantPaysShipping?: boolean;
+}
+
 @Controller()
 export class StoresController {
   constructor(private readonly stores: StoresService) {}
@@ -21,6 +32,13 @@ export class StoresController {
   @UseGuards(JwtAuthGuard)
   create(@Param("merchantId") merchantId: string, @Body() dto: CreateStoreDto) {
     return this.stores.create(merchantId, dto);
+  }
+
+  /** تعديل إعدادات المتجر (الاسم/من يتحمّل الشحن). */
+  @Patch("stores/:id")
+  @UseGuards(JwtAuthGuard)
+  update(@Param("id") id: string, @Body() dto: UpdateStoreDto) {
+    return this.stores.update(id, dto);
   }
 
   /** صفحة المتجر عامة (واجهة الزبون). */

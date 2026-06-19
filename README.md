@@ -33,16 +33,28 @@ moeen/
 └─ pnpm-workspace.yaml
 ```
 
-## التشغيل السريع
+## التشغيل السريع — جرّب المنصة كاملة
 
 المتطلبات: Node ≥ 22، pnpm، Docker.
 
 ```bash
-pnpm install                 # تثبيت الاعتماديات
-cp .env.example .env          # إعداد البيئة
-docker compose up -d          # PostgreSQL + Redis
+pnpm install        # 1) تثبيت الاعتماديات
+pnpm setup          # 2) تشغيل PostgreSQL + Redis + تجهيز قاعدة البيانات
 
-pnpm ledger:test              # تشغيل اختبارات القلب المالي (19 اختباراً)
+# 3) في نافذتين منفصلتين:
+pnpm dev:api        #    الخلفية على http://localhost:3000
+pnpm dev:web        #    الواجهة على http://localhost:3001
+
+pnpm seed           # 4) تعبئة بيانات تجريبية (تطبع رابط الدخول والمتجر)
+```
+
+بعدها افتح **http://localhost:3001**:
+- **دخول التاجر:** `+967771234567` / `demo1234` (لوحة التحكم: محفظة، منتجات، طلبات).
+- **واجهة المتجر للزبون:** الرابط الذي يطبعه `pnpm seed`.
+
+### اختبارات القلب المالي فقط
+```bash
+pnpm ledger:test    # 19 اختباراً للقيد المزدوج
 ```
 
 ## القلب المالي (`packages/ledger`)

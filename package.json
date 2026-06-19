@@ -14,6 +14,10 @@
     "build": "pnpm -r build",
     "test": "pnpm -r test",
     "typecheck": "pnpm -r typecheck",
-    "ledger:test": "pnpm --filter @moeen/ledger test"
+    "ledger:test": "pnpm --filter @moeen/ledger test",
+    "setup": "bash scripts/setup.sh",
+    "seed": "node scripts/seed.mjs",
+    "dev:api": "pnpm --filter @moeen/api start:dev",
+    "dev:web": "pnpm --filter @moeen/web dev"
   }
 }

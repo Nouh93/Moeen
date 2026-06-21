@@ -15,6 +15,7 @@ export class ProductsService {
         storeId,
         name: dto.name,
         description: dto.description ?? null,
+        imageUrl: dto.imageUrl ?? null,
         priceMinor: BigInt(dto.priceMinor),
         stock: dto.stock ?? 0,
       },
@@ -42,6 +43,7 @@ export class ProductsService {
       data: {
         ...(dto.name !== undefined ? { name: dto.name } : {}),
         ...(dto.description !== undefined ? { description: dto.description } : {}),
+        ...(dto.imageUrl !== undefined ? { imageUrl: dto.imageUrl } : {}),
         ...(dto.priceMinor !== undefined ? { priceMinor: BigInt(dto.priceMinor) } : {}),
         ...(dto.stock !== undefined ? { stock: dto.stock } : {}),
         ...(dto.isActive !== undefined ? { isActive: dto.isActive } : {}),

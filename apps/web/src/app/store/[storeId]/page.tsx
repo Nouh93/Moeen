@@ -5,9 +5,15 @@ import { useParams } from "next/navigation";
 import { api, formatYER, setToken } from "@/lib/api";
 
 interface Store { id: string; name: string }
-interface Product { id: string; name: string; priceMinor: string; stock: number }
+interface Product { id: string; name: string; priceMinor: string; stock: number; imageUrl?: string | null }
 
 const SHIPPING_MINOR = 1000;
+
+const GOVERNORATES = [
+  "أمانة العاصمة", "صنعاء", "عدن", "تعز", "الحديدة", "إب", "ذمار", "حضرموت",
+  "حجة", "البيضاء", "لحج", "أبين", "الضالع", "شبوة", "المهرة", "مأرب",
+  "الجوف", "صعدة", "عمران", "المحويت", "ريمة", "سقطرى",
+];
 
 export default function StorefrontPage() {
   const params = useParams();
@@ -70,6 +76,10 @@ export default function StorefrontPage() {
       <div className="grid">
         {products.map((p) => (
           <div key={p.id} className="item">
+            {p.imageUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.imageUrl} alt={p.name} style={{ width: "100%", height: 140, objectFit: "cover", borderRadius: 8 }} />
+            )}
             <strong>{p.name}</strong>
             <span className="price">{formatYER(p.priceMinor)}</span>
             <div className="row">
@@ -114,8 +124,10 @@ function Checkout({
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [payment, setPayment] = useState<"COD" | "ONLINE">("COD");
+  const [addr, setAddr] = useState({ governorate: "أمانة العاصمة", district: "", area: "", landmark: "", notes: "" });
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const setA = (k: string, v: string) => setAddr((a) => ({ ...a, [k]: v }));
 
   async function authCustomer(): Promise<string> {
     // محاولة الدخول، وإلا تسجيل حساب جديد.
@@ -151,6 +163,14 @@ function Checkout({
           unitPriceMinor: Number(it.priceMinor),
           quantity: it.qty,
         })),
+        address: {
+          governorate: addr.governorate,
+          district: addr.district,
+          area: addr.area,
+          landmark: addr.landmark,
+          phone,
+          ...(addr.notes ? { notes: addr.notes } : {}),
+        },
       });
       onDone(order.id);
     } catch (e2) {
@@ -191,6 +211,23 @@ function Checkout({
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+9677…" />
         <label>كلمة المرور</label>
         <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+
+        <h2 style={{ marginTop: 16 }}>عنوان التوصيل</h2>
+        <label>المحافظة</label>
+        <select value={addr.governorate} onChange={(e) => setA("governorate", e.target.value)}>
+          {GOVERNORATES.map((g) => (
+            <option key={g} value={g}>{g}</option>
+          ))}
+        </select>
+        <label>المديرية</label>
+        <input value={addr.district} onChange={(e) => setA("district", e.target.value)} />
+        <label>الحي / المنطقة</label>
+        <input value={addr.area} onChange={(e) => setA("area", e.target.value)} />
+        <label>أقرب معلَم (مهم لوصول المندوب)</label>
+        <input value={addr.landmark} onChange={(e) => setA("landmark", e.target.value)} placeholder="مثال: بجانب جامع النور" />
+        <label>ملاحظات للمندوب (اختياري)</label>
+        <input value={addr.notes} onChange={(e) => setA("notes", e.target.value)} />
+
         <label>طريقة الدفع</label>
         <select value={payment} onChange={(e) => setPayment(e.target.value as "COD" | "ONLINE")}>
           <option value="COD">الدفع عند الاستلام</option>
@@ -198,7 +235,7 @@ function Checkout({
         </select>
         {err && <p className="error">{err}</p>}
         <div style={{ marginTop: 14 }}>
-          <button disabled={busy || !phone || !password}>
+          <button disabled={busy || !phone || !password || !addr.district || !addr.area || !addr.landmark}>
             {busy ? "جارٍ الإرسال…" : `تأكيد الطلب · ${formatYER(total)}`}
           </button>
         </div>

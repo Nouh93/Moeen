@@ -10,6 +10,7 @@ import { CatalogModule } from "./catalog/catalog.module.js";
 import { OrdersModule } from "./orders/orders.module.js";
 import { ShippingModule } from "./shipping/shipping.module.js";
 import { BillingModule } from "./billing/billing.module.js";
+import { AdminModule } from "./admin/admin.module.js";
 import { HealthController } from "./health/health.controller.js";
 
 @Module({
@@ -25,6 +26,7 @@ import { HealthController } from "./health/health.controller.js";
     OrdersModule,
     ShippingModule,
     BillingModule,
+    AdminModule,
   ],
   controllers: [HealthController],
 })

@@ -18,6 +18,12 @@ export class AuthController {
     return this.auth.login(dto.phone, dto.password);
   }
 
+  /** إنشاء أول مشرف (يعمل مرة واحدة فقط). */
+  @Post("bootstrap-admin")
+  bootstrapAdmin(@Body() dto: RegisterDto): Promise<AuthResult> {
+    return this.auth.bootstrapAdmin(dto);
+  }
+
   @Get("me")
   @UseGuards(JwtAuthGuard)
   me(@CurrentUser() user: JwtPayload): JwtPayload {

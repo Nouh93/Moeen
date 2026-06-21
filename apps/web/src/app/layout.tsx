@@ -24,6 +24,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </a>
           <nav className="row">
             <a href="/login">لوحة التاجر</a>
+            <a href="/admin">الإدارة</a>
           </nav>
         </div>
         <main className="container">{children}</main>

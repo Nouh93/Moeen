@@ -13,6 +13,7 @@ interface Tracking {
   store: { name: string };
   shipment: { status: string; waybillNumber: string } | null;
   items: Array<{ nameSnapshot: string; quantity: number; unitPriceMinor: string }>;
+  address: { governorate: string; district: string; area: string; landmark: string; phone: string } | null;
 }
 
 const STEPS = [
@@ -100,6 +101,12 @@ export default function TrackPage() {
           الدفع: {data.paymentMethod === "COD" ? "عند الاستلام" : "إلكتروني"}
           {data.shipment ? ` · بوليصة ${data.shipment.waybillNumber}` : ""}
         </p>
+        {data.address && (
+          <p className="muted">
+            التوصيل: {data.address.governorate} — {data.address.district}، {data.address.area} ·
+            قرب {data.address.landmark} · {data.address.phone}
+          </p>
+        )}
       </div>
     </div>
   );

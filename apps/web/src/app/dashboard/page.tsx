@@ -15,7 +15,7 @@ interface Merchant {
   store: StoreInfo | null;
   subscription: Subscription | null;
 }
-interface Product { id: string; name: string; priceMinor: string; stock: number; isActive: boolean }
+interface Product { id: string; name: string; priceMinor: string; stock: number; isActive: boolean; imageUrl?: string | null }
 interface Order {
   id: string;
   status: string;
@@ -137,6 +137,10 @@ export default function DashboardPage() {
           <div className="grid">
             {products.map((p) => (
               <div key={p.id} className="item" style={{ opacity: p.isActive ? 1 : 0.55 }}>
+                {p.imageUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={p.imageUrl} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }} />
+                )}
                 <strong>{p.name}</strong>
                 <span className="price">{formatYER(p.priceMinor)}</span>
                 <span className="muted">المخزون: {p.stock}</span>
@@ -229,6 +233,7 @@ function AddProduct({ storeId, onDone }: { storeId: string; onDone: () => void }
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [stock, setStock] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
   const [busy, setBusy] = useState(false);
   async function go() {
     setBusy(true);
@@ -237,10 +242,12 @@ function AddProduct({ storeId, onDone }: { storeId: string; onDone: () => void }
         name,
         priceMinor: Number(price),
         stock: stock ? Number(stock) : 0,
+        ...(imageUrl ? { imageUrl } : {}),
       });
       setName("");
       setPrice("");
       setStock("");
+      setImageUrl("");
       onDone();
     } finally {
       setBusy(false);
@@ -251,6 +258,7 @@ function AddProduct({ storeId, onDone }: { storeId: string; onDone: () => void }
       <input style={{ maxWidth: 180 }} placeholder="اسم المنتج" value={name} onChange={(e) => setName(e.target.value)} />
       <input style={{ maxWidth: 140 }} placeholder="السعر (ريال)" value={price} onChange={(e) => setPrice(e.target.value)} />
       <input style={{ maxWidth: 120 }} placeholder="المخزون" value={stock} onChange={(e) => setStock(e.target.value)} />
+      <input style={{ maxWidth: 220 }} placeholder="رابط صورة (اختياري)" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
       <button onClick={go} disabled={busy || !name || !price}>
         إضافة منتج
       </button>

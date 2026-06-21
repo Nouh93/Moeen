@@ -100,6 +100,7 @@ model Product {
   store       Store   @relation(fields: [storeId], references: [id])
   name        String
   description String?
+  imageUrl    String? // رابط صورة المنتج
   priceMinor  BigInt // السعر بالوحدة الصغرى (ريال)
   currency    String  @default("YER")
   stock       Int     @default(0)
@@ -137,6 +138,8 @@ model Address {
   geoLng      Float?
   isDefault   Boolean  @default(false)
   createdAt   DateTime @default(now())
+
+  orders Order[]
 
   @@index([customerId])
 }
@@ -181,6 +184,8 @@ model Order {
   totalMinor      BigInt
   currency        String        @default("YER")
   merchantPaysShipping Boolean  @default(false)
+  addressId       String?       @db.Uuid
+  address         Address?      @relation(fields: [addressId], references: [id])
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 

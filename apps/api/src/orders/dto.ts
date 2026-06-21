@@ -31,6 +31,15 @@ export class OrderItemDto {
   quantity!: number;
 }
 
+export class AddressDto {
+  @IsString() @MinLength(1) governorate!: string;
+  @IsString() @MinLength(1) district!: string;
+  @IsString() @MinLength(1) area!: string;
+  @IsString() @MinLength(1) landmark!: string; // أقرب معلَم — جوهري يمنياً
+  @IsString() @MinLength(1) phone!: string;
+  @IsOptional() @IsString() notes?: string;
+}
+
 export class PlaceOrderDto {
   @IsUUID()
   storeId!: string;
@@ -54,4 +63,10 @@ export class PlaceOrderDto {
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
   items!: OrderItemDto[];
+
+  /** عنوان التوصيل (نظام العناوين اليمني). اختياري للطلبات اليدوية/الاختبار. */
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => AddressDto)
+  address?: AddressDto;
 }

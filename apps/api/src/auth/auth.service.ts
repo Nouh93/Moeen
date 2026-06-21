@@ -47,6 +47,22 @@ export class AuthService {
     return this.buildResult(user.id, user.phone, user.fullName, user.role);
   }
 
+  /**
+   * إنشاء أول حساب مشرف (SUPER_ADMIN). يعمل مرة واحدة فقط: إن وُجد مشرف بالفعل
+   * يُرفض. آمن للتشغيل الأولي بلا أسرار خاصة.
+   */
+  async bootstrapAdmin(input: {
+    phone: string;
+    password: string;
+    fullName: string;
+  }): Promise<AuthResult> {
+    const adminCount = await this.prisma.user.count({ where: { role: "SUPER_ADMIN" } });
+    if (adminCount > 0) {
+      throw new ConflictException("يوجد مشرف بالفعل — أنشئ مشرفين إضافيين من لوحة الإدارة");
+    }
+    return this.register({ ...input, role: "SUPER_ADMIN" });
+  }
+
   async login(phone: string, password: string): Promise<AuthResult> {
     const user = await this.prisma.user.findUnique({ where: { phone } });
     if (!user || !user.passwordHash) throw new UnauthorizedException("بيانات الدخول غير صحيحة");

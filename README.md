@@ -57,6 +57,13 @@ pnpm seed           # 4) تعبئة بيانات تجريبية (تطبع راب
 pnpm ledger:test    # 19 اختباراً للقيد المزدوج
 ```
 
+## النشر
+
+للنشر على خادم أو استضافة مُدارة، راجع [`docs/DEPLOY.md`](docs/DEPLOY.md) — أبسطها أمر واحد:
+```bash
+JWT_SECRET=$(openssl rand -hex 32) docker compose -f docker-compose.prod.yml up -d --build
+```
+
 ## القلب المالي (`packages/ledger`)
 
 دفتر أستاذ بالقيد المزدوج يضمن:

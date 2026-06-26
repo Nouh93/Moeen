@@ -136,24 +136,7 @@ export default function DashboardPage() {
           <h2>المنتجات</h2>
           <div className="grid">
             {products.map((p) => (
-              <div key={p.id} className="item" style={{ opacity: p.isActive ? 1 : 0.55 }}>
-                {p.imageUrl && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={p.imageUrl} alt={p.name} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }} />
-                )}
-                <strong>{p.name}</strong>
-                <span className="price">{formatYER(p.priceMinor)}</span>
-                <span className="muted">المخزون: {p.stock}</span>
-                <button
-                  className="secondary"
-                  onClick={async () => {
-                    await api.patch(`/products/${p.id}`, { isActive: !p.isActive });
-                    flash(p.isActive ? "عُطّل المنتج" : "فُعّل المنتج");
-                  }}
-                >
-                  {p.isActive ? "تعطيل" : "تفعيل"}
-                </button>
-              </div>
+              <ProductCard key={p.id} product={p} onDone={flash} />
             ))}
             {products.length === 0 && <p className="muted">لا توجد منتجات بعد — أضف أول منتج.</p>}
           </div>
@@ -225,6 +208,73 @@ function TopUp({ merchantId, reload }: { merchantId: string; reload: () => Promi
         شحن المحفظة
       </button>
       {err && <span className="error">{err}</span>}
+    </div>
+  );
+}
+
+function ProductCard({ product, onDone }: { product: Product; onDone: (m: string) => void }) {
+  const [edit, setEdit] = useState(false);
+  const [price, setPrice] = useState(String(Number(product.priceMinor)));
+  const [stock, setStock] = useState(String(product.stock));
+  const [busy, setBusy] = useState(false);
+
+  async function save() {
+    setBusy(true);
+    try {
+      await api.patch(`/products/${product.id}`, { priceMinor: Number(price), stock: Number(stock) });
+      setEdit(false);
+      onDone("حُفظ المنتج");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function del() {
+    if (!confirm(`حذف «${product.name}»؟`)) return;
+    await api.del(`/products/${product.id}`);
+    onDone("حُذف المنتج");
+  }
+
+  return (
+    <div className="item" style={{ opacity: product.isActive ? 1 : 0.55 }}>
+      {product.imageUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={product.imageUrl} alt={product.name} style={{ width: "100%", height: 120, objectFit: "cover", borderRadius: 8 }} />
+      )}
+      <strong>{product.name}</strong>
+      {edit ? (
+        <>
+          <label>السعر (ريال)</label>
+          <input value={price} onChange={(e) => setPrice(e.target.value)} />
+          <label>المخزون</label>
+          <input value={stock} onChange={(e) => setStock(e.target.value)} />
+          <div className="row" style={{ gap: 6 }}>
+            <button onClick={save} disabled={busy}>حفظ</button>
+            <button className="secondary" onClick={() => setEdit(false)}>إلغاء</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <span className="price">{formatYER(product.priceMinor)}</span>
+          <span className="muted">
+            المخزون: {product.stock}
+            {product.stock <= 5 && product.stock > 0 ? " (منخفض)" : ""}
+            {product.stock <= 0 ? " — نفد" : ""}
+          </span>
+          <div className="row" style={{ gap: 6 }}>
+            <button className="secondary" onClick={() => setEdit(true)}>تعديل</button>
+            <button
+              className="secondary"
+              onClick={async () => {
+                await api.patch(`/products/${product.id}`, { isActive: !product.isActive });
+                onDone(product.isActive ? "عُطّل المنتج" : "فُعّل المنتج");
+              }}
+            >
+              {product.isActive ? "تعطيل" : "تفعيل"}
+            </button>
+            <button className="secondary" onClick={del}>حذف</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

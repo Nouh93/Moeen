@@ -82,13 +82,20 @@ export default function StorefrontPage() {
             )}
             <strong>{p.name}</strong>
             <span className="price">{formatYER(p.priceMinor)}</span>
-            <div className="row">
-              <button className="secondary" onClick={() => remove(p.id)} disabled={!cart[p.id]}>
-                −
-              </button>
-              <span>{cart[p.id] ?? 0}</span>
-              <button onClick={() => add(p.id)}>+</button>
-            </div>
+            {p.stock <= 0 ? (
+              <span className="badge warn">نفد المخزون</span>
+            ) : (
+              <div className="row">
+                <button className="secondary" onClick={() => remove(p.id)} disabled={!cart[p.id]}>
+                  −
+                </button>
+                <span>{cart[p.id] ?? 0}</span>
+                <button onClick={() => add(p.id)} disabled={(cart[p.id] ?? 0) >= p.stock}>
+                  +
+                </button>
+              </div>
+            )}
+            {p.stock > 0 && p.stock <= 5 && <span className="muted">باقٍ {p.stock} فقط</span>}
           </div>
         ))}
         {products.length === 0 && <p className="muted">لا توجد منتجات في هذا المتجر بعد.</p>}

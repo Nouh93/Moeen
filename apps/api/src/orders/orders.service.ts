@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Order } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AccountsService } from "../ledger/accounts.service.js";
@@ -55,48 +55,73 @@ export class OrdersService {
     const shipping = BigInt(dto.shippingMinor);
     const total = subtotal + (customerPaysShipping ? shipping : 0n);
 
-    // عنوان التوصيل (نظام العناوين اليمني) — يُحفظ للعميل ويُربط بالطلب.
-    let addressId: string | undefined;
-    if (dto.address) {
-      const address = await this.prisma.address.create({
+    // عنوان التوصيل + خصم المخزون + إنشاء الطلب: كلها في معاملة واحدة ذرّية.
+    // خصم المخزون شرطي (stock >= qty) فيمنع البيع الزائد تحت التزامن.
+    const order = await this.prisma.$transaction(async (tx) => {
+      let addressId: string | undefined;
+      if (dto.address) {
+        const address = await tx.address.create({
+          data: {
+            customerId: dto.customerId,
+            governorate: dto.address.governorate,
+            district: dto.address.district,
+            area: dto.address.area,
+            landmark: dto.address.landmark,
+            phone: dto.address.phone,
+            notes: dto.address.notes ?? null,
+          },
+        });
+        addressId = address.id;
+      }
+
+      for (const line of lines) {
+        if (!line.productId) continue; // سطر يدوي بلا منتج → لا مخزون
+        const updated = await tx.product.updateMany({
+          where: { id: line.productId, storeId: dto.storeId, stock: { gte: line.quantity } },
+          data: { stock: { decrement: line.quantity } },
+        });
+        if (updated.count !== 1) {
+          throw new ConflictException(`الكمية غير متوفرة من: ${line.name}`);
+        }
+      }
+
+      return tx.order.create({
         data: {
+          storeId: dto.storeId,
           customerId: dto.customerId,
-          governorate: dto.address.governorate,
-          district: dto.address.district,
-          area: dto.address.area,
-          landmark: dto.address.landmark,
-          phone: dto.address.phone,
-          notes: dto.address.notes ?? null,
+          paymentMethod: dto.paymentMethod,
+          subtotalMinor: subtotal,
+          shippingMinor: shipping,
+          totalMinor: total,
+          merchantPaysShipping,
+          ...(addressId ? { addressId } : {}),
+          items: {
+            create: lines.map((l) => ({
+              productId: l.productId ?? "00000000-0000-0000-0000-000000000000",
+              nameSnapshot: l.name,
+              unitPriceMinor: l.unitPriceMinor,
+              quantity: l.quantity,
+            })),
+          },
         },
       });
-      addressId = address.id;
-    }
-
-    const order = await this.prisma.order.create({
-      data: {
-        storeId: dto.storeId,
-        customerId: dto.customerId,
-        paymentMethod: dto.paymentMethod,
-        subtotalMinor: subtotal,
-        shippingMinor: shipping,
-        totalMinor: total,
-        merchantPaysShipping,
-        ...(addressId ? { addressId } : {}),
-        items: {
-          create: lines.map((l) => ({
-            productId: l.productId ?? "00000000-0000-0000-0000-000000000000",
-            nameSnapshot: l.name,
-            unitPriceMinor: l.unitPriceMinor,
-            quantity: l.quantity,
-          })),
-        },
-      },
     });
 
     if (dto.paymentMethod === "ONLINE") {
       await this.settleOnlinePayment(order, merchantId);
     }
     return order;
+  }
+
+  /** يُعيد كميات المخزون لطلب (عند الإلغاء/الإرجاع). idempotent عبر حارس الحالة في المُستدعي. */
+  async restoreStock(orderId: string): Promise<void> {
+    const items = await this.prisma.orderItem.findMany({ where: { orderId } });
+    for (const item of items) {
+      if (item.productId === "00000000-0000-0000-0000-000000000000") continue;
+      await this.prisma.product
+        .update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } })
+        .catch(() => undefined); // المنتج قد يكون حُذف — نتجاهل
+    }
   }
 
   /**

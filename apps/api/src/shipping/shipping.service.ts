@@ -12,7 +12,7 @@ import {
   PlatformAccounts,
 } from "../ledger/accounts.js";
 import { PricingService } from "../orders/pricing.js";
-import { nonZero } from "../orders/orders.service.js";
+import { nonZero, OrdersService } from "../orders/orders.service.js";
 
 /**
  * إدارة الشحنات (البوالص) والتسوية المالية المرتبطة بها — تطبيق دقيق لـ PRD 24.8.3/4/5:
@@ -32,6 +32,7 @@ export class ShippingService {
     private readonly ledger: LedgerService,
     private readonly accounts: AccountsService,
     private readonly pricing: PricingService,
+    private readonly orders: OrdersService,
   ) {}
 
   private async loadOrderWithMerchant(orderId: string): Promise<{ order: Order; merchantId: string }> {
@@ -111,6 +112,9 @@ export class ShippingService {
     if (order.merchantPaysShipping && order.paymentMethod === "ONLINE" && order.shippingMinor > 0n) {
       await this.releaseHold(merchantId, order.shippingMinor, order.id);
     }
+
+    // استعادة المخزون المحجوز للطلب الملغى.
+    await this.orders.restoreStock(orderId);
 
     return this.prisma.$transaction(async (tx) => {
       await tx.order.update({ where: { id: orderId }, data: { status: "CANCELLED" } });

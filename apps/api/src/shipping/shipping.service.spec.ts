@@ -31,7 +31,7 @@ const pricing = new PricingService();
 const subscriptions = new SubscriptionsService(prisma, ledger, accounts);
 const merchants = new MerchantsService(prisma, auth, wallet, subscriptions);
 const orders = new OrdersService(prisma, ledger, accounts, pricing);
-const shipping = new ShippingService(prisma, ledger, accounts, pricing);
+const shipping = new ShippingService(prisma, ledger, accounts, pricing, orders);
 
 let counter = 0;
 

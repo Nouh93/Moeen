@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from "@nestjs/common";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { ProductsService } from "./products.service.js";
 import { CreateProductDto, UpdateProductDto } from "./dto.js";
@@ -28,5 +28,11 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   update(@Param("id") id: string, @Body() dto: UpdateProductDto) {
     return this.products.update(id, dto);
+  }
+
+  @Delete("products/:id")
+  @UseGuards(JwtAuthGuard)
+  remove(@Param("id") id: string) {
+    return this.products.remove(id);
   }
 }

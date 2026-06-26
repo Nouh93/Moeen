@@ -36,6 +36,12 @@ export class ProductsService {
     return product;
   }
 
+  async remove(id: string): Promise<{ id: string }> {
+    await this.findById(id);
+    await this.prisma.product.delete({ where: { id } });
+    return { id };
+  }
+
   async update(id: string, dto: UpdateProductDto): Promise<Product> {
     await this.findById(id);
     return this.prisma.product.update({

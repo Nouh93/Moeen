@@ -21,23 +21,31 @@ interface AdminMerchant {
   featuredBadge: boolean;
   user: { phone: string };
 }
+interface PendingPayout {
+  id: string;
+  amountMinor: string;
+  merchant: { businessName: string };
+}
 
 export default function AdminPage() {
   const [authed, setAuthed] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
   const [merchants, setMerchants] = useState<AdminMerchant[]>([]);
+  const [payouts, setPayouts] = useState<PendingPayout[]>([]);
   const [error, setError] = useState("");
   const [msg, setMsg] = useState("");
 
   const load = useCallback(async () => {
     setError("");
     try {
-      const [s, m] = await Promise.all([
+      const [s, m, p] = await Promise.all([
         api.get<Stats>("/admin/stats"),
         api.get<AdminMerchant[]>("/admin/merchants"),
+        api.get<PendingPayout[]>("/admin/payouts"),
       ]);
       setStats(s);
       setMerchants(m);
+      setPayouts(p);
       setAuthed(true);
     } catch (e) {
       const msg = (e as Error).message;
@@ -84,6 +92,29 @@ export default function AdminPage() {
           <Stat label="استثناءات الدفع" value={String(stats.paymentExceptions)} />
         </div>
       )}
+
+      <div className="card">
+        <h2>طلبات السحب المعلّقة</h2>
+        {payouts.length === 0 && <p className="muted">لا توجد طلبات سحب معلّقة.</p>}
+        {payouts.length > 0 && (
+          <table>
+            <thead><tr><th>التاجر</th><th>المبلغ</th><th>إجراء</th></tr></thead>
+            <tbody>
+              {payouts.map((p) => (
+                <tr key={p.id}>
+                  <td>{p.merchant.businessName}</td>
+                  <td>{formatYER(p.amountMinor)}</td>
+                  <td>
+                    <button onClick={() => act(() => api.post(`/admin/payouts/${p.id}/paid`, {}), "تم تأكيد الصرف")}>
+                      تأكيد الصرف
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
 
       <div className="card">
         <h2>التجار</h2>

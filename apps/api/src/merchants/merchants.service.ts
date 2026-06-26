@@ -4,6 +4,8 @@ import { PrismaService } from "../prisma/prisma.service.js";
 import { AuthService, type AuthResult } from "../auth/auth.service.js";
 import { WalletService } from "../wallet/wallet.service.js";
 import { SubscriptionsService } from "../billing/subscriptions.service.js";
+import { LedgerService } from "../ledger/ledger.service.js";
+import { merchantSettlement } from "../ledger/accounts.js";
 import type { OnboardMerchantDto } from "./dto.js";
 
 /** سعر الاشتراك الشهري الافتراضي (ريال يمني). قابل للضبط لاحقاً. */
@@ -16,6 +18,7 @@ export class MerchantsService {
     private readonly auth: AuthService,
     private readonly wallet: WalletService,
     private readonly subscriptions: SubscriptionsService,
+    private readonly ledger: LedgerService,
   ) {}
 
   /**
@@ -84,6 +87,9 @@ export class MerchantsService {
     });
     if (!merchant) throw new NotFoundException("التاجر غير موجود");
     const balanceMinor = await this.wallet.balance(id).catch(() => 0n);
+    const settlementMinor = await this.ledger
+      .balanceOf(merchantSettlement(id))
+      .catch(() => 0n);
     const subscription = await this.prisma.subscription.findFirst({
       where: { merchantId: id },
       orderBy: { createdAt: "desc" },
@@ -95,6 +101,7 @@ export class MerchantsService {
       ...rest,
       store: stores[0] ?? null,
       walletBalanceMinor: balanceMinor.toString(),
+      settlementBalanceMinor: settlementMinor.toString(),
       subscription: subscription
         ? { status: subscription.status, priceMinor: subscription.priceMinor.toString() }
         : null,

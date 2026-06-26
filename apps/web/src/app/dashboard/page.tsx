@@ -12,9 +12,11 @@ interface Merchant {
   status: string;
   governorate: string;
   walletBalanceMinor: string;
+  settlementBalanceMinor: string;
   store: StoreInfo | null;
   subscription: Subscription | null;
 }
+interface Payout { id: string; amountMinor: string; status: string; createdAt: string }
 interface Product { id: string; name: string; priceMinor: string; stock: number; isActive: boolean; imageUrl?: string | null }
 interface Order {
   id: string;
@@ -101,9 +103,15 @@ export default function DashboardPage() {
       {msg && <p className="ok">{msg}</p>}
 
       <div className="card">
-        <h2>المحفظة</h2>
+        <h2>المحفظة (رصيد مدفوع مسبقاً)</h2>
         <div className="stat">{formatYER(merchant.walletBalanceMinor)}</div>
         <TopUp merchantId={merchant.id} reload={load} />
+      </div>
+
+      <div className="card">
+        <h2>مبيعاتي القابلة للسحب</h2>
+        <div className="stat">{formatYER(merchant.settlementBalanceMinor)}</div>
+        <Payouts merchantId={merchant.id} available={merchant.settlementBalanceMinor} reload={load} />
       </div>
 
       {store && (
@@ -208,6 +216,56 @@ function TopUp({ merchantId, reload }: { merchantId: string; reload: () => Promi
         شحن المحفظة
       </button>
       {err && <span className="error">{err}</span>}
+    </div>
+  );
+}
+
+function Payouts({ merchantId, available, reload }: { merchantId: string; available: string; reload: () => Promise<void> }) {
+  const [amount, setAmount] = useState("");
+  const [list, setList] = useState<Payout[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const refresh = useCallback(() => {
+    api.get<Payout[]>(`/merchants/${merchantId}/payouts`).then(setList).catch(() => {});
+  }, [merchantId]);
+  useEffect(() => { refresh(); }, [refresh, available]);
+
+  async function go() {
+    setErr("");
+    setBusy(true);
+    try {
+      await api.post(`/merchants/${merchantId}/payouts`, { amountMinor: String(Number(amount)) });
+      setAmount("");
+      await reload();
+      refresh();
+    } catch (e) {
+      setErr((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  const label: Record<string, string> = { PENDING: "قيد الصرف", PAID: "صُرف", CANCELLED: "ملغى" };
+  return (
+    <div>
+      <div className="row" style={{ marginTop: 12 }}>
+        <input style={{ maxWidth: 200 }} placeholder="مبلغ السحب (ريال)" value={amount} onChange={(e) => setAmount(e.target.value)} />
+        <button onClick={go} disabled={busy || !amount || Number(amount) <= 0}>طلب سحب</button>
+      </div>
+      {err && <p className="error">{err}</p>}
+      {list.length > 0 && (
+        <table style={{ marginTop: 10 }}>
+          <thead><tr><th>المبلغ</th><th>الحالة</th></tr></thead>
+          <tbody>
+            {list.map((p) => (
+              <tr key={p.id}>
+                <td>{formatYER(p.amountMinor)}</td>
+                <td><span className={`badge ${p.status === "PAID" ? "ok" : "warn"}`}>{label[p.status] ?? p.status}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

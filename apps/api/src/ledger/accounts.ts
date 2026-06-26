@@ -19,6 +19,7 @@ export const PlatformAccounts = {
   COD_CLEARING: "cod-clearing",
   PAYABLE_CARRIER: "payable:carrier",
   PAYABLE_ACQUIRER: "payable:acquirer",
+  PAYABLE_PAYOUTS: "payable:payouts",
   REVENUE_COMMISSION: "revenue:commission",
   REVENUE_COLLECTION: "revenue:collection",
   REVENUE_SUBSCRIPTION: "revenue:subscription",

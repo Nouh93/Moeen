@@ -73,7 +73,30 @@ model Merchant {
   stores        Store[]
   subscriptions Subscription[]
   ledgerAccounts LedgerAccount[]
+  payouts       Payout[]
 
+  @@index([status])
+}
+
+enum PayoutStatus {
+  PENDING // طُلب — حُجز من رصيد التسوية
+  PAID // صُرف فعلياً للتاجر
+  CANCELLED
+}
+
+// طلب سحب مستحقات التاجر من رصيد التسوية.
+model Payout {
+  id          String       @id @default(uuid()) @db.Uuid
+  merchantId  String       @db.Uuid
+  merchant    Merchant     @relation(fields: [merchantId], references: [id])
+  amountMinor BigInt
+  currency    String       @default("YER")
+  status      PayoutStatus @default(PENDING)
+  method      String? // وسيلة الصرف (محفظة/حوالة…)
+  createdAt   DateTime     @default(now())
+  paidAt      DateTime?
+
+  @@index([merchantId])
   @@index([status])
 }
 

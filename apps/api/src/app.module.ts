@@ -11,6 +11,7 @@ import { OrdersModule } from "./orders/orders.module.js";
 import { ShippingModule } from "./shipping/shipping.module.js";
 import { BillingModule } from "./billing/billing.module.js";
 import { AdminModule } from "./admin/admin.module.js";
+import { PayoutsModule } from "./payouts/payouts.module.js";
 import { HealthController } from "./health/health.controller.js";
 
 @Module({
@@ -27,6 +28,7 @@ import { HealthController } from "./health/health.controller.js";
     ShippingModule,
     BillingModule,
     AdminModule,
+    PayoutsModule,
   ],
   controllers: [HealthController],
 })

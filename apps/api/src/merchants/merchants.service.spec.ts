@@ -19,7 +19,7 @@ const ledger = new LedgerService(prisma);
 const accounts = new AccountsService(ledger);
 const wallet = new WalletService(ledger, accounts);
 const subscriptions = new SubscriptionsService(prisma, ledger, accounts);
-const merchants = new MerchantsService(prisma, auth, wallet, subscriptions);
+const merchants = new MerchantsService(prisma, auth, wallet, subscriptions, ledger);
 
 async function reset(): Promise<void> {
   await prisma.ledgerPosting.deleteMany();

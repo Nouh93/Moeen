@@ -1,6 +1,9 @@
 import { Body, Controller, Get, Param, Patch, Post, UseGuards } from "@nestjs/common";
 import { IsBoolean, IsOptional, IsString, MinLength } from "class-validator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import type { JwtPayload } from "../auth/auth.service.js";
+import { OwnershipService } from "../auth/ownership.service.js";
 import { StoresService } from "./stores.service.js";
 
 class CreateStoreDto {
@@ -26,18 +29,31 @@ class UpdateStoreDto {
 
 @Controller()
 export class StoresController {
-  constructor(private readonly stores: StoresService) {}
+  constructor(
+    private readonly stores: StoresService,
+    private readonly ownership: OwnershipService,
+  ) {}
 
   @Post("merchants/:merchantId/stores")
   @UseGuards(JwtAuthGuard)
-  create(@Param("merchantId") merchantId: string, @Body() dto: CreateStoreDto) {
+  async create(
+    @Param("merchantId") merchantId: string,
+    @Body() dto: CreateStoreDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    await this.ownership.assertOwnsMerchant(user, merchantId);
     return this.stores.create(merchantId, dto);
   }
 
   /** تعديل إعدادات المتجر (الاسم/من يتحمّل الشحن). */
   @Patch("stores/:id")
   @UseGuards(JwtAuthGuard)
-  update(@Param("id") id: string, @Body() dto: UpdateStoreDto) {
+  async update(
+    @Param("id") id: string,
+    @Body() dto: UpdateStoreDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    await this.ownership.assertOwnsStore(user, id);
     return this.stores.update(id, dto);
   }
 

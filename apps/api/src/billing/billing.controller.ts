@@ -12,6 +12,11 @@ import {
 import type { RawBodyRequest } from "@nestjs/common";
 import type { Request } from "express";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
+import { RolesGuard } from "../auth/roles.guard.js";
+import { Roles } from "../auth/roles.decorator.js";
+import { CurrentUser } from "../auth/current-user.decorator.js";
+import type { JwtPayload } from "../auth/auth.service.js";
+import { OwnershipService } from "../auth/ownership.service.js";
 import { GatewayRegistry } from "../payments/gateway.registry.js";
 import { PaymentIngestService } from "./payment-ingest.service.js";
 import { ReconciliationService } from "./reconciliation.service.js";
@@ -27,6 +32,7 @@ export class BillingController {
     private readonly subscriptions: SubscriptionsService,
     private readonly dunning: DunningService,
     private readonly gateways: GatewayRegistry,
+    private readonly ownership: OwnershipService,
   ) {}
 
   /**
@@ -50,11 +56,10 @@ export class BillingController {
     return this.ingest.submit(gateway.normalize(req.body));
   }
 
-  /**
-   * نقطة عامة بلا توقيع — للرفع اليدوي/الاختبار الداخلي فقط (محميّة بتوكن موظّف).
-   */
+  /** نقطة رفع يدوي بلا توقيع — للمشرفين فقط. */
   @Post("webhooks/payments")
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPER_ADMIN", "STAFF")
   receivePayment(@Body() dto: PaymentWebhookDto) {
     return this.ingest.submit({
       externalRef: dto.externalRef,
@@ -64,30 +69,38 @@ export class BillingController {
     });
   }
 
-  /** طابور الاستثناءات (للموظف). */
+  /** طابور الاستثناءات — للمشرفين. */
   @Get("billing/exceptions")
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPER_ADMIN", "STAFF")
   exceptions() {
     return this.reconciliation.listExceptions();
   }
 
-  /** إنشاء اشتراك لتاجر. */
+  /** إنشاء اشتراك لتاجر — المالك أو المشرف. */
   @Post("merchants/:merchantId/subscription")
   @UseGuards(JwtAuthGuard)
-  createSubscription(@Param("merchantId") merchantId: string, @Body() dto: IssueInvoiceDto) {
+  async createSubscription(
+    @Param("merchantId") merchantId: string,
+    @Body() dto: IssueInvoiceDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    await this.ownership.assertOwnsMerchant(user, merchantId);
     return this.subscriptions.createSubscription(merchantId, BigInt(dto.priceMinor));
   }
 
-  /** إصدار فاتورة الشهر يدوياً (تشغيلياً عبر الجدولة). */
+  /** إصدار فاتورة الشهر يدوياً — للمشرفين (تشغيلياً عبر الجدولة). */
   @Post("merchants/:merchantId/invoices/run")
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPER_ADMIN", "STAFF")
   issueInvoice(@Param("merchantId") merchantId: string) {
     return this.subscriptions.issueMonthlyInvoice(merchantId);
   }
 
-  /** تشغيل دورة الإنذار يدوياً (تشغيلياً عبر الجدولة اليومية). */
+  /** تشغيل دورة الإنذار يدوياً — للمشرفين. */
   @Post("billing/dunning/run")
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles("SUPER_ADMIN", "STAFF")
   runDunning() {
     return this.dunning.runCycle();
   }

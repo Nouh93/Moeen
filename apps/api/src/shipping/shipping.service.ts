@@ -122,6 +122,45 @@ export class ShippingService {
     });
   }
 
+  /**
+   * إرجاع الطلب (RTO):
+   *  - إن لم يُسلَّم بعد: يُحرَّر الحجز (كالإلغاء) — لا تسوية لتُعكَس.
+   *  - إن سُلِّم وسُوِّي: يُعكَس قيد التسوية (استرداد) — قد يُرفض إن سُحبت المستحقات.
+   *  في الحالتين: يُستعاد المخزون وتُحدَّث الحالة إلى RETURNED.
+   */
+  async returnOrder(orderId: string): Promise<Shipment> {
+    const shipment = await this.prisma.shipment.findUnique({ where: { orderId } });
+    if (!shipment) throw new NotFoundException("لا توجد بوليصة لهذا الطلب");
+    if (shipment.status === "RETURNED") return shipment;
+
+    const { order, merchantId } = await this.loadOrderWithMerchant(orderId);
+
+    if (shipment.status === "DELIVERED") {
+      // استرداد: اعكس قيد التسوية.
+      const settlementKey = order.paymentMethod === "COD" ? `order-cod:${orderId}` : `order-online:${orderId}`;
+      try {
+        await this.ledger.reverseEntry(settlementKey, `refund:${orderId}`, `استرداد الطلب ${orderId}`);
+      } catch (error) {
+        if (error instanceof InsufficientFundsError) {
+          throw new BadRequestException(
+            "تعذّر الاسترداد: رصيد التاجر لا يكفي (قد تكون المستحقات مسحوبة)",
+          );
+        }
+        throw error;
+      }
+    } else if (order.merchantPaysShipping && order.paymentMethod === "ONLINE" && order.shippingMinor > 0n) {
+      // لم يُسلَّم: حرّر الحجز.
+      await this.releaseHold(merchantId, order.shippingMinor, order.id);
+    }
+
+    await this.orders.restoreStock(orderId);
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.order.update({ where: { id: orderId }, data: { status: "RETURNED" } });
+      return tx.shipment.update({ where: { orderId }, data: { status: "RETURNED" } });
+    });
+  }
+
   // ───────────────────────── العمليات المالية الداخلية ─────────────────────────
 
   /** حجز مبلغ الشحن وفق waterfall: رصيد المدفوعات ← المحفظة. يرفض إن لم يكفِ المجموع. */

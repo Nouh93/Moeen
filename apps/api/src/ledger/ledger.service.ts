@@ -64,6 +64,37 @@ export class LedgerService {
     });
   }
 
+  /**
+   * يعكس قيداً موجوداً (للاسترداد/الإلغاء المحاسبي): يقرأ سطور القيد الأصلي ويُرحّل
+   * قيداً معاكساً (تبديل مدين/دائن). idempotent عبر مفتاح العكس. يُرفض إن دفع العكس
+   * حساباً محميّاً تحت الصفر (مثلاً استرداد بعد سحب المستحقات).
+   */
+  async reverseEntry(
+    originalKey: string,
+    reverseKey: string,
+    description: string,
+  ): Promise<{ id: string; idempotent: boolean }> {
+    const original = await this.prisma.journalEntry.findUnique({
+      where: { idempotencyKey: originalKey },
+      include: { postings: { include: { account: { select: { code: true } } } } },
+    });
+    if (!original) {
+      throw new UnknownAccountError(`لا يوجد قيد بالمفتاح: ${originalKey}`);
+    }
+    const postings: PostingInput[] = original.postings.map((p) => ({
+      accountCode: p.account.code,
+      side: p.side === "DEBIT" ? "CREDIT" : "DEBIT",
+      amountMinor: p.amountMinor,
+      currency: p.currency,
+    }));
+    return this.post({
+      idempotencyKey: reverseKey,
+      description,
+      ...(original.reference ? { reference: original.reference } : {}),
+      postings,
+    });
+  }
+
   /** الرصيد بالجانب الطبيعي للحساب (بالوحدة الصغرى). */
   async balanceOf(code: string): Promise<bigint> {
     const account = await this.prisma.ledgerAccount.findUnique({ where: { code } });

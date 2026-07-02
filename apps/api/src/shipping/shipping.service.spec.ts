@@ -258,4 +258,44 @@ d("ShippingService — التدفقات المالية الكاملة (PRD 24.8)
     expect(await prisma.journalEntry.count()).toBe(entriesAfterFirst);
     await assertBalanced();
   });
+
+  it("استرداد (RTO) بعد التسليم يعكس التسوية ويبقى الدفتر متوازناً", async () => {
+    const { merchantId, storeId, customerId } = await seed();
+    const order = await orders.place({
+      storeId,
+      customerId,
+      paymentMethod: "COD",
+      shippingMinor: 1000,
+      merchantPaysShipping: false,
+      items: [{ name: "منتج", unitPriceMinor: 10000, quantity: 1 }],
+    });
+    await shipping.createWaybill(order.id);
+    await shipping.confirmDelivery(order.id);
+    expect(await bal(merchantSettlement(merchantId))).toBe(9750n);
+
+    const returned = await shipping.returnOrder(order.id);
+    expect(returned.status).toBe("RETURNED");
+    // التسوية عادت صفراً (عُكِس القيد).
+    expect(await bal(merchantSettlement(merchantId))).toBe(0n);
+    expect(await bal(PlatformAccounts.REVENUE_COMMISSION)).toBe(0n);
+    await assertBalanced();
+  });
+
+  it("إرجاع قبل التسليم يحرّر الحجز ويصبح RETURNED", async () => {
+    const { merchantId, storeId, customerId } = await seed();
+    const order = await orders.place({
+      storeId,
+      customerId,
+      paymentMethod: "ONLINE",
+      shippingMinor: 1000,
+      merchantPaysShipping: true,
+      items: [{ name: "منتج", unitPriceMinor: 10000, quantity: 1 }],
+    });
+    await shipping.createWaybill(order.id);
+    expect(await bal(merchantHold(merchantId))).toBe(1000n);
+    const returned = await shipping.returnOrder(order.id);
+    expect(returned.status).toBe("RETURNED");
+    expect(await bal(merchantHold(merchantId))).toBe(0n);
+    await assertBalanced();
+  });
 });

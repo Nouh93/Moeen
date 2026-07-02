@@ -33,4 +33,11 @@ export class ShippingController {
     await this.ownership.assertOwnsOrder(user, orderId);
     return this.shipping.cancel(orderId);
   }
+
+  /** إرجاع الطلب (RTO) — تحرير الحجز أو استرداد التسوية حسب الحالة. */
+  @Post("return")
+  async returnOrder(@Param("orderId") orderId: string, @CurrentUser() user: JwtPayload) {
+    await this.ownership.assertOwnsOrder(user, orderId);
+    return this.shipping.returnOrder(orderId);
+  }
 }

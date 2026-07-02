@@ -390,8 +390,18 @@ function OrderActions({ order, onDone }: { order: Order; onDone: (m: string) => 
       setBusy(false);
     }
   }
-  if (order.status === "DELIVERED") return <span className="muted">✓ تم</span>;
+  if (order.status === "DELIVERED") {
+    return (
+      <div className="row" style={{ gap: 6 }}>
+        <span className="muted">✓ تم</span>
+        <button className="secondary" disabled={busy} onClick={() => call("return", "تم الاسترداد")}>
+          استرداد
+        </button>
+      </div>
+    );
+  }
   if (order.status === "CANCELLED") return <span className="muted">—</span>;
+  if (order.status === "RETURNED") return <span className="muted">مُرجَع</span>;
   if (!ship) {
     return (
       <button disabled={busy} onClick={() => call("waybill", "أُنشئت البوليصة")}>

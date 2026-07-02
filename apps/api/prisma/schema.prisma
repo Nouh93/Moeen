@@ -1,0 +1,411 @@
+// نموذج بيانات مُعين — المخطط الأساسي + دفتر الأستاذ المالي.
+// قاعدة البيانات: PostgreSQL 16 (ACID — ضروري لسلامة الفلوس).
+//
+// مبدأ حاكم: القيد المزدوج يُكتب داخل معاملة (transaction) واحدة، وقواعد
+// التوازن وعدم السلب نفسها الموجودة في packages/ledger تُطبَّق هنا أيضاً.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── الهوية والوصول ─────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  STAFF
+  MERCHANT
+  COURIER
+  CUSTOMER
+}
+
+model User {
+  id           String    @id @default(uuid()) @db.Uuid
+  phone        String    @unique // رقم الجوال هو المُعرّف الأساسي يمنياً
+  email        String?   @unique
+  passwordHash String?
+  fullName     String
+  role         UserRole
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  merchant Merchant?
+  courier  Courier?
+  customer Customer?
+
+  @@index([role])
+}
+
+// ───────────────────────────── التجار والمتاجر ─────────────────────────────
+
+enum MerchantStatus {
+  PENDING // قيد المراجعة
+  ACTIVE
+  SUSPENDED // تعليق مؤقت (تأخر اشتراك)
+  CLOSED
+}
+
+enum KycLevel {
+  LEVEL_0
+  LEVEL_1
+  LEVEL_2
+  LEVEL_3
+}
+
+model Merchant {
+  id            String         @id @default(uuid()) @db.Uuid
+  userId        String         @unique @db.Uuid
+  user          User           @relation(fields: [userId], references: [id])
+  businessName  String
+  status        MerchantStatus @default(PENDING)
+  kycLevel      KycLevel       @default(LEVEL_0)
+  trustedBadge  Boolean        @default(false)
+  featuredBadge Boolean        @default(false)
+  governorate   String // المحافظة (إحدى 22)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  stores        Store[]
+  subscriptions Subscription[]
+  ledgerAccounts LedgerAccount[]
+  payouts       Payout[]
+
+  @@index([status])
+}
+
+enum PayoutStatus {
+  PENDING // طُلب — حُجز من رصيد التسوية
+  PAID // صُرف فعلياً للتاجر
+  CANCELLED
+}
+
+// طلب سحب مستحقات التاجر من رصيد التسوية.
+model Payout {
+  id          String       @id @default(uuid()) @db.Uuid
+  merchantId  String       @db.Uuid
+  merchant    Merchant     @relation(fields: [merchantId], references: [id])
+  amountMinor BigInt
+  currency    String       @default("YER")
+  status      PayoutStatus @default(PENDING)
+  method      String? // وسيلة الصرف (محفظة/حوالة…)
+  createdAt   DateTime     @default(now())
+  paidAt      DateTime?
+
+  @@index([merchantId])
+  @@index([status])
+}
+
+model Store {
+  id             String   @id @default(uuid()) @db.Uuid
+  merchantId     String   @db.Uuid
+  merchant       Merchant @relation(fields: [merchantId], references: [id])
+  name           String
+  slug           String   @unique
+  isVisible      Boolean  @default(true) // يُخفى عند التعليق
+  merchantPaysShipping Boolean @default(false) // الافتراضي: العميل يدفع الشحن
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  products Product[]
+  orders   Order[]
+
+  @@index([merchantId])
+}
+
+model Product {
+  id          String  @id @default(uuid()) @db.Uuid
+  storeId     String  @db.Uuid
+  store       Store   @relation(fields: [storeId], references: [id])
+  name        String
+  description String?
+  imageUrl    String? // رابط صورة المنتج
+  priceMinor  BigInt // السعر بالوحدة الصغرى (ريال)
+  currency    String  @default("YER")
+  stock       Int     @default(0)
+  isActive    Boolean @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([storeId])
+}
+
+// ───────────────────────────── العملاء والمندوبون ─────────────────────────────
+
+model Customer {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @unique @db.Uuid
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+
+  addresses Address[]
+  orders    Order[]
+}
+
+model Address {
+  id          String   @id @default(uuid()) @db.Uuid
+  customerId  String   @db.Uuid
+  customer    Customer @relation(fields: [customerId], references: [id])
+  label       String? // "البيت"، "الدكان"
+  governorate String
+  district    String // المديرية
+  area        String // الحي/المنطقة
+  landmark    String // أقرب معلَم — جوهري في نظام العناوين اليمني
+  phone       String
+  notes       String?
+  geoLat      Float?
+  geoLng      Float?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  orders Order[]
+
+  @@index([customerId])
+}
+
+model Courier {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @db.Uuid
+  user        User     @relation(fields: [userId], references: [id])
+  governorate String
+  isAvailable Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  shipments Shipment[]
+}
+
+// ───────────────────────────── الطلبات والشحنات ─────────────────────────────
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  RETURNED // RTO
+}
+
+enum PaymentMethod {
+  COD // الدفع عند الاستلام
+  ONLINE // إلكتروني عبر MEPS
+}
+
+model Order {
+  id              String        @id @default(uuid()) @db.Uuid
+  storeId         String        @db.Uuid
+  store           Store         @relation(fields: [storeId], references: [id])
+  customerId      String        @db.Uuid
+  customer        Customer      @relation(fields: [customerId], references: [id])
+  status          OrderStatus   @default(PENDING)
+  paymentMethod   PaymentMethod
+  subtotalMinor   BigInt
+  shippingMinor   BigInt        @default(0)
+  totalMinor      BigInt
+  currency        String        @default("YER")
+  merchantPaysShipping Boolean  @default(false)
+  addressId       String?       @db.Uuid
+  address         Address?      @relation(fields: [addressId], references: [id])
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  items    OrderItem[]
+  shipment Shipment?
+
+  @@index([storeId])
+  @@index([customerId])
+  @@index([status])
+}
+
+model OrderItem {
+  id              String @id @default(uuid()) @db.Uuid
+  orderId         String @db.Uuid
+  order           Order  @relation(fields: [orderId], references: [id])
+  productId       String @db.Uuid
+  nameSnapshot    String // لقطة الاسم وقت الطلب
+  unitPriceMinor  BigInt
+  quantity        Int
+
+  @@index([orderId])
+}
+
+enum ShipmentStatus {
+  CREATED // بوليصة منشأة — حجز مبلغ فقط
+  PICKED_UP
+  IN_TRANSIT
+  DELIVERED // خصم فعلي وتسوية
+  RETURNED // RTO
+  CANCELLED
+}
+
+model Shipment {
+  id            String         @id @default(uuid()) @db.Uuid
+  orderId       String         @unique @db.Uuid
+  order         Order          @relation(fields: [orderId], references: [id])
+  courierId     String?        @db.Uuid
+  courier       Courier?       @relation(fields: [courierId], references: [id])
+  status        ShipmentStatus @default(CREATED)
+  waybillNumber String         @unique
+  costMinor     BigInt // تكلفة الشحن
+  createdAt     DateTime       @default(now())
+  deliveredAt   DateTime?
+
+  @@index([status])
+}
+
+// ───────────────────────────── الاشتراك والتحصيل ─────────────────────────────
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
+model Subscription {
+  id          String             @id @default(uuid()) @db.Uuid
+  merchantId  String             @db.Uuid
+  merchant    Merchant           @relation(fields: [merchantId], references: [id])
+  status      SubscriptionStatus @default(ACTIVE)
+  priceMinor  BigInt
+  currency    String             @default("YER")
+  periodStart DateTime
+  periodEnd   DateTime
+  createdAt   DateTime           @default(now())
+
+  invoices Invoice[]
+
+  @@index([merchantId])
+  @@index([status])
+}
+
+enum InvoiceStatus {
+  OPEN
+  PAID
+  VOID
+}
+
+model Invoice {
+  id             String        @id @default(uuid()) @db.Uuid
+  subscriptionId String        @db.Uuid
+  subscription   Subscription  @relation(fields: [subscriptionId], references: [id])
+  // المرجع الفريد لمحرّك المطابقة: MOEEN-<merchant>-<YYYYMM>
+  reference      String        @unique
+  status         InvoiceStatus @default(OPEN)
+  amountMinor    BigInt
+  currency       String        @default("YER")
+  issuedAt       DateTime      @default(now())
+  dueAt          DateTime
+  paidAt         DateTime?
+
+  payments Payment[]
+
+  @@index([status])
+}
+
+enum PaymentSource {
+  MEPS_SETTLEMENT // المسار 1
+  AGGREGATOR // المسار 2 (eSadad/WeNet)
+  WALLET_API // المسار 3
+  MEPS_CARD // المسار 4
+  BANK_TRANSFER // المسار 5
+  MANUAL_RECEIPT // المسار 6
+  PREPAID_BALANCE // خصم من رصيد مدفوع مسبقاً
+}
+
+enum PaymentStatus {
+  PENDING
+  MATCHED // طُوبق آلياً
+  EXCEPTION // طابور الاستثناءات
+  REFUNDED
+}
+
+// كل حدث وارد (callback/تسوية/كشف/رفع يدوي) يدخل هنا ويُطابَق idempotently.
+model Payment {
+  id             String        @id @default(uuid()) @db.Uuid
+  invoiceId      String?       @db.Uuid
+  invoice        Invoice?      @relation(fields: [invoiceId], references: [id])
+  source         PaymentSource
+  status         PaymentStatus @default(PENDING)
+  amountMinor    BigInt
+  currency       String        @default("YER")
+  // مفتاح فريد من المزوّد يمنع المعالجة المزدوجة (idempotency).
+  externalRef    String        @unique
+  matchedRef     String? // المرجع الذي طُوبق به
+  rawPayload     Json? // الحمولة الأصلية للتدقيق
+  receivedAt     DateTime      @default(now())
+  matchedAt      DateTime?
+
+  @@index([status])
+  @@index([source])
+}
+
+// ───────────────────────────── دفتر الأستاذ المالي ─────────────────────────────
+// يعكس packages/ledger. كل حركة = JournalEntry متوازن من ≥ 2 LedgerPosting،
+// تُكتب داخل معاملة واحدة. منع الرصيد السالب يُطبَّق على الحسابات المحميّة.
+
+enum LedgerAccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  REVENUE
+  EXPENSE
+}
+
+model LedgerAccount {
+  id            String            @id @default(uuid()) @db.Uuid
+  // مُعرّف منطقي ثابت مثل wallet:merchant:<id> أو settlement:merchant:<id>
+  code          String            @unique
+  type          LedgerAccountType
+  currency      String            @default("YER")
+  allowNegative Boolean           @default(false)
+  // رصيد مُخزَّن (cache) بالجانب الطبيعي — مصدر الحقيقة هو مجموع القيود.
+  balanceMinor  BigInt            @default(0)
+
+  merchantId String?   @db.Uuid
+  merchant   Merchant? @relation(fields: [merchantId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  postings LedgerPosting[]
+
+  @@index([merchantId])
+  @@index([type])
+}
+
+model JournalEntry {
+  id             String   @id @default(uuid()) @db.Uuid
+  // مفتاح يمنع الترحيل المزدوج (idempotency) — مثل payment:<ref>:settled
+  idempotencyKey String   @unique
+  description    String
+  reference      String? // مرجع خارجي للتدقيق
+  occurredAt     DateTime @default(now())
+  // تسلسل رتيب للتدقيق والترتيب
+  sequence       BigInt   @default(autoincrement())
+
+  postings LedgerPosting[]
+
+  @@index([reference])
+}
+
+enum PostingSide {
+  DEBIT
+  CREDIT
+}
+
+model LedgerPosting {
+  id          String        @id @default(uuid()) @db.Uuid
+  entryId     String        @db.Uuid
+  entry       JournalEntry  @relation(fields: [entryId], references: [id])
+  accountId   String        @db.Uuid
+  account     LedgerAccount @relation(fields: [accountId], references: [id])
+  side        PostingSide
+  amountMinor BigInt // موجب دائماً؛ الاتجاه يحدّده side
+  currency    String        @default("YER")
+
+  @@index([entryId])
+  @@index([accountId])
+}

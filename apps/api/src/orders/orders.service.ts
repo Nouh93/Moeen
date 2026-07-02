@@ -1,0 +1,214 @@
+import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import type { Order } from "@prisma/client";
+import { parsePage, toPage } from "../common/pagination.js";
+import { PrismaService } from "../prisma/prisma.service.js";
+import { AccountsService } from "../ledger/accounts.service.js";
+import { LedgerService, type PostingInput } from "../ledger/ledger.service.js";
+import { merchantSettlement, PlatformAccounts } from "../ledger/accounts.js";
+import { PricingService } from "./pricing.js";
+import type { PlaceOrderDto } from "./dto.js";
+
+@Injectable()
+export class OrdersService {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly ledger: LedgerService,
+    private readonly accounts: AccountsService,
+    private readonly pricing: PricingService,
+  ) {}
+
+  /**
+   * إنشاء طلب. للطلبات الإلكترونية (ONLINE) يُسجَّل التحصيل والتسوية فوراً
+   * (الدفع مُقدَّم). لطلبات COD لا قيد مالي عند الإنشاء — النقد يُحصَّل عند التسليم.
+   */
+  async place(dto: PlaceOrderDto): Promise<Order> {
+    const store = await this.prisma.store.findUnique({ where: { id: dto.storeId } });
+    if (!store) throw new NotFoundException("المتجر غير موجود");
+    const customer = await this.prisma.customer.findUnique({ where: { id: dto.customerId } });
+    if (!customer) throw new NotFoundException("العميل غير موجود");
+
+    const merchantId = store.merchantId;
+    await this.accounts.ensurePlatform();
+    await this.accounts.ensureMerchant(merchantId);
+
+    // تسعير موثوق من الخادم: إن وُجد productId يُؤخذ السعر والاسم من قاعدة البيانات
+    // (لا نثق بسعر العميل). وإلا يُستخدم المُرسَل (للاختبار/الطلبات اليدوية).
+    const lines = await Promise.all(
+      dto.items.map(async (it) => {
+        if (it.productId) {
+          const product = await this.prisma.product.findFirst({
+            where: { id: it.productId, storeId: dto.storeId, isActive: true },
+          });
+          if (!product) throw new NotFoundException(`المنتج غير موجود: ${it.productId}`);
+          return { name: product.name, unitPriceMinor: product.priceMinor, quantity: it.quantity, productId: product.id };
+        }
+        return {
+          name: it.name,
+          unitPriceMinor: BigInt(it.unitPriceMinor),
+          quantity: it.quantity,
+          productId: undefined as string | undefined,
+        };
+      }),
+    );
+    const subtotal = lines.reduce((sum, l) => sum + l.unitPriceMinor * BigInt(l.quantity), 0n);
+    const merchantPaysShipping = dto.merchantPaysShipping ?? store.merchantPaysShipping;
+    const customerPaysShipping = !merchantPaysShipping;
+    const shipping = BigInt(dto.shippingMinor);
+    const total = subtotal + (customerPaysShipping ? shipping : 0n);
+
+    // عنوان التوصيل + خصم المخزون + إنشاء الطلب: كلها في معاملة واحدة ذرّية.
+    // خصم المخزون شرطي (stock >= qty) فيمنع البيع الزائد تحت التزامن.
+    const order = await this.prisma.$transaction(async (tx) => {
+      let addressId: string | undefined;
+      if (dto.address) {
+        const address = await tx.address.create({
+          data: {
+            customerId: dto.customerId,
+            governorate: dto.address.governorate,
+            district: dto.address.district,
+            area: dto.address.area,
+            landmark: dto.address.landmark,
+            phone: dto.address.phone,
+            notes: dto.address.notes ?? null,
+          },
+        });
+        addressId = address.id;
+      }
+
+      for (const line of lines) {
+        if (!line.productId) continue; // سطر يدوي بلا منتج → لا مخزون
+        const updated = await tx.product.updateMany({
+          where: { id: line.productId, storeId: dto.storeId, stock: { gte: line.quantity } },
+          data: { stock: { decrement: line.quantity } },
+        });
+        if (updated.count !== 1) {
+          throw new ConflictException(`الكمية غير متوفرة من: ${line.name}`);
+        }
+      }
+
+      return tx.order.create({
+        data: {
+          storeId: dto.storeId,
+          customerId: dto.customerId,
+          paymentMethod: dto.paymentMethod,
+          subtotalMinor: subtotal,
+          shippingMinor: shipping,
+          totalMinor: total,
+          merchantPaysShipping,
+          ...(addressId ? { addressId } : {}),
+          items: {
+            create: lines.map((l) => ({
+              productId: l.productId ?? "00000000-0000-0000-0000-000000000000",
+              nameSnapshot: l.name,
+              unitPriceMinor: l.unitPriceMinor,
+              quantity: l.quantity,
+            })),
+          },
+        },
+      });
+    });
+
+    if (dto.paymentMethod === "ONLINE") {
+      await this.settleOnlinePayment(order, merchantId);
+    }
+    return order;
+  }
+
+  /** يُعيد كميات المخزون لطلب (عند الإلغاء/الإرجاع). idempotent عبر حارس الحالة في المُستدعي. */
+  async restoreStock(orderId: string): Promise<void> {
+    const items = await this.prisma.orderItem.findMany({ where: { orderId } });
+    for (const item of items) {
+      if (item.productId === "00000000-0000-0000-0000-000000000000") continue;
+      await this.prisma.product
+        .update({ where: { id: item.productId }, data: { stock: { increment: item.quantity } } })
+        .catch(() => undefined); // المنتج قد يكون حُذف — نتجاهل
+    }
+  }
+
+  /**
+   * تسوية الدفع الإلكتروني عند الإنشاء (نموذج PayFac):
+   *  - النقد الوارد يُقيَّد كاملاً، وتُقتطع رسوم البوابة (MDR) والعمولة قبل
+   *    تقييد صافي التاجر، وحصة العميل من الشحن (إن دفعها) تذهب لشركة الشحن.
+   */
+  private async settleOnlinePayment(order: Order, merchantId: string): Promise<void> {
+    const subtotal = order.subtotalMinor;
+    const customerPaysShipping = !order.merchantPaysShipping;
+    const carrierShipping = customerPaysShipping ? order.shippingMinor : 0n;
+    const total = order.totalMinor;
+    const mdr = this.pricing.mdr(total);
+    const commission = this.pricing.commission(subtotal);
+    const settlementNet = subtotal - commission;
+
+    const postings: PostingInput[] = nonZero([
+      { accountCode: PlatformAccounts.CASH, side: "DEBIT", amountMinor: total },
+      { accountCode: PlatformAccounts.EXPENSE_MDR, side: "DEBIT", amountMinor: mdr },
+      { accountCode: merchantSettlement(merchantId), side: "CREDIT", amountMinor: settlementNet },
+      { accountCode: PlatformAccounts.REVENUE_COMMISSION, side: "CREDIT", amountMinor: commission },
+      { accountCode: PlatformAccounts.PAYABLE_CARRIER, side: "CREDIT", amountMinor: carrierShipping },
+      { accountCode: PlatformAccounts.PAYABLE_ACQUIRER, side: "CREDIT", amountMinor: mdr },
+    ]);
+
+    await this.ledger.post({
+      idempotencyKey: `order-online:${order.id}`,
+      description: `تسوية دفع إلكتروني للطلب ${order.id}`,
+      reference: order.id,
+      postings,
+    });
+  }
+
+  async findById(id: string): Promise<Order> {
+    const order = await this.prisma.order.findUnique({ where: { id } });
+    if (!order) throw new NotFoundException("الطلب غير موجود");
+    return order;
+  }
+
+  /** تتبّع طلب — معلومات عامة محدودة للزبون (بمعرّف الطلب). */
+  async track(id: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        status: true,
+        paymentMethod: true,
+        totalMinor: true,
+        createdAt: true,
+        store: { select: { name: true } },
+        shipment: { select: { status: true, waybillNumber: true } },
+        items: { select: { nameSnapshot: true, quantity: true, unitPriceMinor: true } },
+        address: {
+          select: { governorate: true, district: true, area: true, landmark: true, phone: true },
+        },
+      },
+    });
+    if (!order) throw new NotFoundException("الطلب غير موجود");
+    return order;
+  }
+
+  /** طلبات تاجر (عبر متاجره) — للوحة التحكم، مع ترقيم صفحات. */
+  async listByMerchant(merchantId: string, page?: string, perPage?: string) {
+    const p = parsePage(page, perPage);
+    const where = { store: { merchantId } };
+    const [items, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: p.skip,
+        take: p.take,
+        include: {
+          items: true,
+          shipment: { select: { status: true, waybillNumber: true } },
+          address: {
+            select: { governorate: true, district: true, area: true, landmark: true, phone: true },
+          },
+        },
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return toPage(items, total, p);
+  }
+}
+
+/** يستبعد السطور ذات المبلغ صفر (محرّك الدفتر يتطلّب مبالغ موجبة فقط). */
+export function nonZero(postings: PostingInput[]): PostingInput[] {
+  return postings.filter((p) => p.amountMinor > 0n);
+}

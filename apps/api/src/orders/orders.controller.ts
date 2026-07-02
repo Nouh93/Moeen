@@ -20,9 +20,14 @@ export class OrdersController {
   }
 
   @Get()
-  async list(@Query("merchantId") merchantId: string, @CurrentUser() user: JwtPayload) {
+  async list(
+    @Query("merchantId") merchantId: string,
+    @CurrentUser() user: JwtPayload,
+    @Query("page") page?: string,
+    @Query("perPage") perPage?: string,
+  ) {
     await this.ownership.assertOwnsMerchant(user, merchantId);
-    return this.orders.listByMerchant(merchantId);
+    return this.orders.listByMerchant(merchantId, page, perPage);
   }
 
   @Get(":id")

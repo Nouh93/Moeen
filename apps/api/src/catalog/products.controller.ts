@@ -13,10 +13,15 @@ export class ProductsController {
     private readonly ownership: OwnershipService,
   ) {}
 
-  /** قائمة منتجات متجر — عامة (واجهة المتجر). */
+  /** قائمة منتجات متجر — عامة (واجهة المتجر) مع ترقيم صفحات. */
   @Get("stores/:storeId/products")
-  list(@Param("storeId") storeId: string, @Query("all") all?: string) {
-    return this.products.listByStore(storeId, all === "1");
+  list(
+    @Param("storeId") storeId: string,
+    @Query("all") all?: string,
+    @Query("page") page?: string,
+    @Query("perPage") perPage?: string,
+  ) {
+    return this.products.listByStore(storeId, all === "1", page, perPage);
   }
 
   @Get("products/:id")

@@ -40,11 +40,11 @@ export default function AdminPage() {
     try {
       const [s, m, p] = await Promise.all([
         api.get<Stats>("/admin/stats"),
-        api.get<AdminMerchant[]>("/admin/merchants"),
+        api.get<{ items: AdminMerchant[] }>("/admin/merchants?perPage=100"),
         api.get<PendingPayout[]>("/admin/payouts"),
       ]);
       setStats(s);
-      setMerchants(m);
+      setMerchants(m.items);
       setPayouts(p);
       setAuthed(true);
     } catch (e) {

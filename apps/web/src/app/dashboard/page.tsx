@@ -39,11 +39,13 @@ export default function DashboardPage() {
       const m = await api.get<Merchant>("/merchants/me");
       setMerchant(m);
       const [o, p] = await Promise.all([
-        api.get<Order[]>(`/orders?merchantId=${m.id}`),
-        m.store ? api.get<Product[]>(`/stores/${m.store.id}/products?all=1`) : Promise.resolve([]),
+        api.get<{ items: Order[] }>(`/orders?merchantId=${m.id}&perPage=50`),
+        m.store
+          ? api.get<{ items: Product[] }>(`/stores/${m.store.id}/products?all=1&perPage=100`)
+          : Promise.resolve({ items: [] as Product[] }),
       ]);
-      setOrders(o);
-      setProducts(p);
+      setOrders(o.items);
+      setProducts(p.items);
     } catch (err) {
       setError((err as Error).message);
     }

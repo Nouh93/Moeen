@@ -1,5 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import type { Order } from "@prisma/client";
+import { parsePage, toPage } from "../common/pagination.js";
 import { PrismaService } from "../prisma/prisma.service.js";
 import { AccountsService } from "../ledger/accounts.service.js";
 import { LedgerService, type PostingInput } from "../ledger/ledger.service.js";
@@ -183,20 +184,27 @@ export class OrdersService {
     return order;
   }
 
-  /** طلبات تاجر (عبر متاجره) — للوحة التحكم. */
-  async listByMerchant(merchantId: string) {
-    return this.prisma.order.findMany({
-      where: { store: { merchantId } },
-      orderBy: { createdAt: "desc" },
-      take: 50,
-      include: {
-        items: true,
-        shipment: { select: { status: true, waybillNumber: true } },
-        address: {
-          select: { governorate: true, district: true, area: true, landmark: true, phone: true },
+  /** طلبات تاجر (عبر متاجره) — للوحة التحكم، مع ترقيم صفحات. */
+  async listByMerchant(merchantId: string, page?: string, perPage?: string) {
+    const p = parsePage(page, perPage);
+    const where = { store: { merchantId } };
+    const [items, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        skip: p.skip,
+        take: p.take,
+        include: {
+          items: true,
+          shipment: { select: { status: true, waybillNumber: true } },
+          address: {
+            select: { governorate: true, district: true, area: true, landmark: true, phone: true },
+          },
         },
-      },
-    });
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return toPage(items, total, p);
   }
 }
 

@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { Product } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { parsePage, toPage, type Page } from "../common/pagination.js";
 import type { CreateProductDto, UpdateProductDto } from "./dto.js";
 
 @Injectable()
@@ -22,12 +23,20 @@ export class ProductsService {
     });
   }
 
-  /** منتجات متجر (للواجهة الأمامية) — النشطة فقط افتراضياً. */
-  async listByStore(storeId: string, includeInactive = false): Promise<Product[]> {
-    return this.prisma.product.findMany({
-      where: { storeId, ...(includeInactive ? {} : { isActive: true }) },
-      orderBy: { createdAt: "desc" },
-    });
+  /** منتجات متجر (للواجهة الأمامية) — النشطة فقط افتراضياً، مع ترقيم صفحات. */
+  async listByStore(
+    storeId: string,
+    includeInactive = false,
+    page?: string,
+    perPage?: string,
+  ): Promise<Page<Product>> {
+    const p = parsePage(page, perPage);
+    const where = { storeId, ...(includeInactive ? {} : { isActive: true }) };
+    const [items, total] = await Promise.all([
+      this.prisma.product.findMany({ where, orderBy: { createdAt: "desc" }, skip: p.skip, take: p.take }),
+      this.prisma.product.count({ where }),
+    ]);
+    return toPage(items, total, p);
   }
 
   async findById(id: string): Promise<Product> {

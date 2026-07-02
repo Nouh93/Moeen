@@ -67,7 +67,7 @@ async function main() {
     { name: "زبيب أحمر (كيلو)", priceMinor: 3000, stock: 30 },
   ];
   const existing = await call(`/stores/${storeId}/products?all=1`, { token });
-  if (existing.length === 0) {
+  if ((existing.items ?? existing).length === 0) {
     for (const p of products) {
       await call(`/stores/${storeId}/products`, { method: "POST", token, body: p });
     }

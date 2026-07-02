@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException } from "@nestjs/common";
 import type { MerchantStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service.js";
+import { parsePage, toPage } from "../common/pagination.js";
 
 @Injectable()
 export class AdminService {
@@ -37,22 +38,24 @@ export class AdminService {
     };
   }
 
-  async listMerchants() {
-    return this.prisma.merchant.findMany({
-      orderBy: { createdAt: "desc" },
-      take: 200,
-      select: {
-        id: true,
-        businessName: true,
-        governorate: true,
-        status: true,
-        kycLevel: true,
-        trustedBadge: true,
-        featuredBadge: true,
-        createdAt: true,
-        user: { select: { phone: true } },
-      },
-    });
+  async listMerchants(page?: string, perPage?: string) {
+    const p = parsePage(page, perPage);
+    const select = {
+      id: true,
+      businessName: true,
+      governorate: true,
+      status: true,
+      kycLevel: true,
+      trustedBadge: true,
+      featuredBadge: true,
+      createdAt: true,
+      user: { select: { phone: true } },
+    };
+    const [items, total] = await Promise.all([
+      this.prisma.merchant.findMany({ orderBy: { createdAt: "desc" }, skip: p.skip, take: p.take, select }),
+      this.prisma.merchant.count(),
+    ]);
+    return toPage(items, total, p);
   }
 
   /** يضبط حالة التاجر يدوياً ويُزامن ظهور متاجره. */

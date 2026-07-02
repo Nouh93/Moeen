@@ -26,7 +26,10 @@ export default function StorefrontPage() {
 
   useEffect(() => {
     api.get<Store>(`/stores/${storeId}`).then(setStore).catch((e) => setError((e as Error).message));
-    api.get<Product[]>(`/stores/${storeId}/products`).then(setProducts).catch(() => {});
+    api
+      .get<{ items: Product[] }>(`/stores/${storeId}/products?perPage=100`)
+      .then((r) => setProducts(r.items))
+      .catch(() => {});
   }, [storeId]);
 
   const items = useMemo(

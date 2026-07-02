@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from "@nestjs/common";
+import { Body, Controller, Get, Param, Post, Query, UseGuards } from "@nestjs/common";
 import { IsBoolean, IsOptional } from "class-validator";
 import { JwtAuthGuard } from "../auth/jwt-auth.guard.js";
 import { RolesGuard } from "../auth/roles.guard.js";
@@ -22,8 +22,8 @@ export class AdminController {
   }
 
   @Get("merchants")
-  merchants() {
-    return this.admin.listMerchants();
+  merchants(@Query("page") page?: string, @Query("perPage") perPage?: string) {
+    return this.admin.listMerchants(page, perPage);
   }
 
   @Get("exceptions")

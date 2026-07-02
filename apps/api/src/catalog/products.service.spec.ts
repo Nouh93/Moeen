@@ -46,16 +46,16 @@ d("ProductsService", () => {
     expect(created.priceMinor).toBe(2500n);
 
     const list = await products.listByStore(storeId);
-    expect(list).toHaveLength(1);
-    expect(list[0]!.name).toBe("تمر");
+    expect(list.total).toBe(1);
+    expect(list.items[0]!.name).toBe("تمر");
   });
 
   it("يُخفي المنتجات غير النشطة افتراضياً", async () => {
     const storeId = await seedStore();
     const p = await products.create(storeId, { name: "عسل", priceMinor: 5000 });
     await products.update(p.id, { isActive: false });
-    expect(await products.listByStore(storeId)).toHaveLength(0);
-    expect(await products.listByStore(storeId, true)).toHaveLength(1);
+    expect((await products.listByStore(storeId)).total).toBe(0);
+    expect((await products.listByStore(storeId, true)).total).toBe(1);
   });
 
   it("يرفض الإنشاء على متجر غير موجود", async () => {

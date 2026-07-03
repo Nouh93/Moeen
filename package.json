@@ -1,0 +1,16 @@
+{
+  "name": "moeen",
+  "private": true,
+  "version": "0.1.0",
+  "description": "منصة مُعين — منصة متاجر إلكترونية يمنية",
+  "scripts": {
+    "dev:api": "pnpm --filter @moeen/api dev",
+    "dev:web": "pnpm --filter @moeen/web dev",
+    "build": "pnpm -r build",
+    "db:migrate": "pnpm --filter @moeen/api db:migrate",
+    "db:seed": "pnpm --filter @moeen/api db:seed"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

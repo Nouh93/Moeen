@@ -1,0 +1,201 @@
+// منصة مُعين — مخطط قاعدة البيانات (المرحلة 1: MVP)
+// Multi-tenant: كل بيانات التاجر مرتبطة بـ storeId — القسم 17.2 من الوثيقة الرئيسية.
+// (تفعيل Row-Level Security يُضاف في مرحلة التقوية قبل الإطلاق)
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- المستخدمون والتحقق ----------
+
+model User {
+  id        String   @id @default(cuid())
+  phone     String   @unique // +9677XXXXXXXX
+  name      String?
+  role      UserRole @default(MERCHANT)
+  createdAt DateTime @default(now())
+  stores    Store[]
+}
+
+enum UserRole {
+  MERCHANT
+  ADMIN
+}
+
+// رموز OTP — القسم 4.1 (واتساب أولاً و SMS احتياطاً؛ في التطوير يُعاد الرمز في الاستجابة)
+model OtpCode {
+  id         String    @id @default(cuid())
+  phone      String
+  code       String
+  expiresAt  DateTime
+  consumedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([phone, code])
+}
+
+// ---------- التقسيم الإداري اليمني (القسم 23 من الملحق) ----------
+
+model Governorate {
+  id        Int        @id @default(autoincrement())
+  code      String     @unique
+  nameAr    String
+  districts District[]
+  stores    Store[]
+  orders    Order[]
+}
+
+model District {
+  id            Int         @id @default(autoincrement())
+  nameAr        String
+  governorate   Governorate @relation(fields: [governorateId], references: [id])
+  governorateId Int
+  orders        Order[]
+
+  @@unique([governorateId, nameAr])
+}
+
+// ---------- المتجر (المستأجر / Tenant) ----------
+
+model Store {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  name          String
+  description   String?
+  logoUrl       String?
+  whatsapp      String?
+  currency      Currency     @default(YER_SANAA)
+  status        StoreStatus  @default(ACTIVE)
+  plan          Plan         @default(FREE)
+  // تأكيد طلبات COD هاتفياً قبل التجهيز — القسم 7.1 (مفعّل افتراضياً)
+  codConfirmation Boolean    @default(true)
+  shippingFee   Decimal      @default(0) @db.Decimal(12, 2)
+  owner         User         @relation(fields: [ownerId], references: [id])
+  ownerId       String
+  governorate   Governorate? @relation(fields: [governorateId], references: [id])
+  governorateId Int?
+  city          String?
+  createdAt     DateTime     @default(now())
+  products      Product[]
+  orders        Order[]
+}
+
+enum StoreStatus {
+  ACTIVE
+  SUSPENDED // تعليق لعدم السداد (القسم 24.5 بالملحق) أو مخالفة
+  CLOSED
+}
+
+enum Plan {
+  FREE // بداية
+  GROWTH // نمو
+  PRO // احتراف
+}
+
+enum Currency {
+  YER_SANAA
+  YER_ADEN
+  USD
+  SAR
+}
+
+// ---------- المنتجات (القسم 5) ----------
+
+model Product {
+  id             String        @id @default(cuid())
+  store          Store         @relation(fields: [storeId], references: [id])
+  storeId        String
+  name           String
+  description    String?
+  price          Decimal       @db.Decimal(12, 2)
+  compareAtPrice Decimal?      @db.Decimal(12, 2) // سعر قبل التخفيض
+  imageUrl       String?
+  trackStock     Boolean       @default(false)
+  stock          Int           @default(0)
+  status         ProductStatus @default(ACTIVE)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  orderItems     OrderItem[]
+
+  @@index([storeId, status])
+}
+
+enum ProductStatus {
+  ACTIVE
+  HIDDEN
+}
+
+// ---------- الطلبات (القسم 7) ----------
+
+model Order {
+  id             String        @id @default(cuid())
+  // كود تتبع عام قصير يظهر للعميل — صفحة تتبع بدون تسجيل دخول (القسم 6.3)
+  code           String        @unique
+  store          Store         @relation(fields: [storeId], references: [id])
+  storeId        String
+  // مفتاح idempotency يمنع تكرار الطلب عند إعادة الإرسال offline — القسم 22.1.2 بالملحق
+  idempotencyKey String?
+  customerName   String
+  customerPhone  String
+  // العنوان اليمني — القسم 23.2 بالملحق: محافظة + مديرية + حي/عزلة + وصف تفصيلي
+  governorate    Governorate   @relation(fields: [governorateId], references: [id])
+  governorateId  Int
+  district       District?     @relation(fields: [districtId], references: [id])
+  districtId     Int?
+  districtText   String? // للمحافظات التي لم تُحمَّل مديرياتها بعد
+  neighborhood   String // الحي / العزلة / المنطقة
+  addressDetails String // الوصف التفصيلي: "بجانب مسجد كذا..."
+  courierNote    String? // ملاحظة للمندوب
+  paymentMethod  PaymentMethod @default(COD)
+  status         OrderStatus   @default(NEW)
+  subtotal       Decimal       @db.Decimal(12, 2)
+  shippingFee    Decimal       @default(0) @db.Decimal(12, 2)
+  total          Decimal       @db.Decimal(12, 2)
+  currency       Currency
+  items          OrderItem[]
+  events         OrderEvent[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([storeId, idempotencyKey])
+  @@index([storeId, status, createdAt])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+  product   Product? @relation(fields: [productId], references: [id])
+  productId String?
+  name      String // لقطة من اسم المنتج وقت الطلب
+  price     Decimal  @db.Decimal(12, 2)
+  quantity  Int
+}
+
+// سجل أحداث الطلب — كل تغيير حالة يُسجَّل (وأساس إشعارات واتساب لاحقاً)
+model OrderEvent {
+  id        String      @id @default(cuid())
+  order     Order       @relation(fields: [orderId], references: [id])
+  orderId   String
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+}
+
+enum OrderStatus {
+  NEW // جديد — قيد المراجعة
+  PROCESSING // قيد التجهيز
+  OUT_FOR_DELIVERY // مع المندوب
+  DELIVERED // تم التسليم
+  CANCELLED // ملغي
+  RETURNED // مرتجع
+}
+
+enum PaymentMethod {
+  COD // الدفع عند الاستلام — الافتراضي والوحيد في المرحلة 1
+}

@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #f0fdf9;
+  --color-brand-100: #cbfcef;
+  --color-brand-500: #0d9488;
+  --color-brand-600: #0f766e;
+  --color-brand-700: #115e59;
+  --color-brand-900: #134e4a;
+}
+
+html {
+  font-family:
+    "Segoe UI", Tahoma, "Noto Kufi Arabic", "Noto Sans Arabic", system-ui,
+    sans-serif;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900;
+}

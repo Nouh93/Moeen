@@ -104,6 +104,8 @@ export class StoresService {
       where: { slug },
       include: {
         governorate: true,
+        categories: { orderBy: { sortOrder: "asc" } },
+        shippingRates: { include: { governorate: true } },
         products: {
           where: { status: "ACTIVE" },
           orderBy: { createdAt: "desc" },
@@ -116,5 +118,108 @@ export class StoresService {
     }
     const { ownerId, ...pub } = store;
     return pub;
+  }
+
+  // ---- أسعار الشحن لكل محافظة (القسم 8.2) ----
+
+  async listShippingRates(storeId: string, ownerId: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    return this.prisma.shippingRate.findMany({
+      where: { storeId },
+      include: { governorate: true },
+      orderBy: { governorateId: "asc" },
+    });
+  }
+
+  async upsertShippingRate(
+    storeId: string,
+    ownerId: string,
+    data: { governorateId: number; fee: number; etaText?: string },
+  ) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    return this.prisma.shippingRate.upsert({
+      where: {
+        storeId_governorateId: { storeId, governorateId: data.governorateId },
+      },
+      create: { storeId, ...data },
+      update: { fee: data.fee, etaText: data.etaText },
+    });
+  }
+
+  async deleteShippingRate(storeId: string, ownerId: string, id: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    const rate = await this.prisma.shippingRate.findFirst({
+      where: { id, storeId },
+    });
+    if (!rate) throw new NotFoundException("سعر الشحن غير موجود");
+    return this.prisma.shippingRate.delete({ where: { id } });
+  }
+
+  // ---- إحصائيات لوحة التاجر (القسم 11.1): أرقام كبيرة واضحة ----
+
+  async stats(storeId: string, ownerId: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    const now = new Date();
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfWeek = new Date(startOfDay);
+    startOfWeek.setDate(startOfWeek.getDate() - 6);
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    // المبيعات = الطلبات غير الملغاة/المرتجعة
+    const salesWhere = (from: Date) => ({
+      storeId,
+      createdAt: { gte: from },
+      status: { notIn: ["CANCELLED" as const, "RETURNED" as const] },
+    });
+
+    const [today, week, month, byStatus, topItems] = await Promise.all([
+      this.prisma.order.aggregate({
+        where: salesWhere(startOfDay),
+        _count: true,
+        _sum: { total: true },
+      }),
+      this.prisma.order.aggregate({
+        where: salesWhere(startOfWeek),
+        _count: true,
+        _sum: { total: true },
+      }),
+      this.prisma.order.aggregate({
+        where: salesWhere(startOfMonth),
+        _count: true,
+        _sum: { total: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ["status"],
+        where: { storeId },
+        _count: true,
+      }),
+      this.prisma.orderItem.groupBy({
+        by: ["name"],
+        where: {
+          order: {
+            storeId,
+            status: { notIn: ["CANCELLED", "RETURNED"] },
+          },
+        },
+        _sum: { quantity: true },
+        orderBy: { _sum: { quantity: "desc" } },
+        take: 5,
+      }),
+    ]);
+
+    const fmt = (r: { _count: number; _sum: { total: any } }) => ({
+      orders: r._count,
+      revenue: r._sum.total ?? 0,
+    });
+    return {
+      today: fmt(today),
+      week: fmt(week),
+      month: fmt(month),
+      byStatus: Object.fromEntries(byStatus.map((s) => [s.status, s._count])),
+      topProducts: topItems.map((t) => ({
+        name: t.name,
+        sold: t._sum.quantity ?? 0,
+      })),
+    };
   }
 }

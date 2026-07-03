@@ -55,6 +55,10 @@ class CreateProductDto {
   @IsOptional()
   @IsIn(["ACTIVE", "HIDDEN"])
   status?: string;
+
+  @IsOptional()
+  @IsString()
+  categoryId?: string | null;
 }
 
 class UpdateProductDto extends CreateProductDto {

@@ -69,6 +69,10 @@ class CheckoutDto {
 
   @IsOptional()
   @IsString()
+  couponCode?: string;
+
+  @IsOptional()
+  @IsString()
   idempotencyKey?: string;
 
   @IsArray()
@@ -111,8 +115,24 @@ export class OrdersController {
     @CurrentUser() u: AuthUser,
     @Param("storeId") storeId: string,
     @Query("status") status?: string,
+    @Query("q") q?: string,
+    @Query("page") page?: string,
   ) {
-    return this.orders.list(storeId, u.sub, status);
+    return this.orders.list(storeId, u.sub, {
+      status,
+      q,
+      page: page ? Number(page) : 1,
+    });
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("stores/:storeId/orders/:orderId")
+  getOne(
+    @CurrentUser() u: AuthUser,
+    @Param("storeId") storeId: string,
+    @Param("orderId") orderId: string,
+  ) {
+    return this.orders.getOne(storeId, u.sub, orderId);
   }
 
   @UseGuards(JwtAuthGuard)

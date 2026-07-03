@@ -1,7 +1,35 @@
-import Link from "next/link";
+import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { api, formatPrice } from "@/lib/api";
+import { api, imgUrl } from "@/lib/api";
 import { CartLink } from "./cart-widgets";
+import { ProductsBrowser } from "./products-browser";
+
+async function getStore(slug: string) {
+  try {
+    return await api(`/public/stores/${encodeURIComponent(slug)}`);
+  } catch {
+    return null;
+  }
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const store = await getStore(slug);
+  if (!store) return { title: "المتجر غير موجود — مُعين" };
+  return {
+    title: `${store.name} — مُعين`,
+    description: store.description ?? `تسوّق من ${store.name} — الدفع عند الاستلام والتوصيل داخل اليمن`,
+    openGraph: {
+      title: store.name,
+      description: store.description ?? "",
+      ...(store.logoUrl ? { images: [imgUrl(store.logoUrl)!] } : {}),
+    },
+  };
+}
 
 export default async function StorePage({
   params,
@@ -9,83 +37,46 @@ export default async function StorePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  let store: any;
-  try {
-    store = await api(`/public/stores/${encodeURIComponent(slug)}`);
-  } catch {
-    notFound();
-  }
+  const store = await getStore(slug);
+  if (!store) notFound();
 
   return (
     <main className="min-h-screen">
       <header className="bg-brand-700 text-white">
         <div className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{store.name}</h1>
-            {store.description && (
-              <p className="text-brand-100 text-sm mt-1">{store.description}</p>
+          <div className="flex items-center gap-3 min-w-0">
+            {store.logoUrl && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={imgUrl(store.logoUrl)}
+                alt=""
+                className="w-14 h-14 rounded-xl object-cover bg-white/10 shrink-0"
+              />
             )}
-            <p className="text-brand-100 text-xs mt-1">
-              {store.governorate?.nameAr}
-              {store.city ? ` — ${store.city}` : ""}
-            </p>
+            <div className="min-w-0">
+              <h1 className="text-2xl font-bold truncate">{store.name}</h1>
+              {store.description && (
+                <p className="text-brand-100 text-sm mt-1 line-clamp-1">{store.description}</p>
+              )}
+              <p className="text-brand-100 text-xs mt-1">
+                {store.governorate?.nameAr}
+                {store.city ? ` — ${store.city}` : ""}
+                {store.freeShippingAbove &&
+                  ` · 🚚 توصيل مجاني فوق ${Number(store.freeShippingAbove).toLocaleString("ar-YE")}`}
+              </p>
+            </div>
           </div>
           <CartLink slug={slug} />
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 py-8">
-        {store.products.length === 0 ? (
-          <p className="text-center text-gray-500 py-20">
-            لا توجد منتجات معروضة حالياً
-          </p>
-        ) : (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-            {store.products.map((p: any) => (
-              <Link
-                key={p.id}
-                href={`/s/${slug}/p/${p.id}`}
-                className="bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow"
-              >
-                <div className="aspect-square bg-gray-100 flex items-center justify-center text-5xl">
-                  {p.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={p.imageUrl}
-                      alt={p.name}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    "🛍️"
-                  )}
-                </div>
-                <div className="p-3">
-                  <div className="font-semibold text-sm leading-snug line-clamp-2">
-                    {p.name}
-                  </div>
-                  <div className="mt-2 flex items-center gap-2">
-                    <span className="text-brand-700 font-bold">
-                      {formatPrice(p.price, store.currency)}
-                    </span>
-                    {p.compareAtPrice && (
-                      <span className="text-xs text-gray-400 line-through">
-                        {formatPrice(p.compareAtPrice, store.currency)}
-                      </span>
-                    )}
-                  </div>
-                  {p.trackStock && p.stock <= 3 && p.stock > 0 && (
-                    <div className="text-xs text-amber-600 mt-1">
-                      تبقى {p.stock} فقط!
-                    </div>
-                  )}
-                  {p.trackStock && p.stock === 0 && (
-                    <div className="text-xs text-red-500 mt-1">نفدت الكمية</div>
-                  )}
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
+      <div className="max-w-5xl mx-auto px-4 py-6">
+        <ProductsBrowser
+          slug={slug}
+          currency={store.currency}
+          products={store.products}
+          categories={store.categories ?? []}
+        />
 
         {store.whatsapp && (
           <a

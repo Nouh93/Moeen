@@ -1,7 +1,31 @@
+import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { api, formatPrice } from "@/lib/api";
+import { api, formatPrice, imgUrl } from "@/lib/api";
 import { AddToCartButton, CartLink } from "../../cart-widgets";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string; id: string }>;
+}): Promise<Metadata> {
+  const { slug, id } = await params;
+  try {
+    const store = await api(`/public/stores/${encodeURIComponent(slug)}`);
+    const product = store.products.find((p: any) => p.id === id);
+    if (!product) return { title: store.name };
+    return {
+      title: `${product.name} — ${store.name}`,
+      description: product.description ?? `اطلب ${product.name} من ${store.name} — الدفع عند الاستلام`,
+      openGraph: {
+        title: product.name,
+        ...(product.imageUrl ? { images: [imgUrl(product.imageUrl)!] } : {}),
+      },
+    };
+  } catch {
+    return { title: "مُعين" };
+  }
+}
 
 export default async function ProductPage({
   params,
@@ -36,7 +60,7 @@ export default async function ProductPage({
           {product.imageUrl ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={product.imageUrl}
+              src={imgUrl(product.imageUrl)}
               alt={product.name}
               className="w-full h-full object-cover"
             />

@@ -13,6 +13,7 @@ export class ProductsService {
     await this.stores.ownedByOrThrow(storeId, ownerId);
     return this.prisma.product.findMany({
       where: { storeId },
+      include: { category: true },
       orderBy: { createdAt: "desc" },
     });
   }

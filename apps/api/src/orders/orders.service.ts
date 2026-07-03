@@ -10,8 +10,14 @@ import {
   normalizeYemeniPhone,
 } from "@moeen/shared";
 import { randomInt } from "crypto";
+import { CouponsService } from "../coupons/coupons.service";
+import { NotificationsService } from "../notifications/notifications.service";
+import { TEMPLATES } from "../notifications/templates";
 import { PrismaService } from "../prisma/prisma.service";
 import { StoresService } from "../stores/stores.service";
+
+const WEB_URL = process.env.WEB_URL ?? "http://localhost:3000";
+const LOW_STOCK_THRESHOLD = 3;
 
 export interface CheckoutItem {
   productId: string;
@@ -27,6 +33,7 @@ export interface CheckoutData {
   neighborhood: string;
   addressDetails: string;
   courierNote?: string;
+  couponCode?: string;
   items: CheckoutItem[];
   idempotencyKey?: string;
 }
@@ -41,7 +48,24 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private stores: StoresService,
+    private coupons: CouponsService,
+    private notifications: NotificationsService,
   ) {}
+
+  /** حساب رسوم الشحن: سعر المحافظة إن وُجد، وإلا الافتراضي، والمجاني فوق الحد (القسم 8.2) */
+  private async computeShipping(
+    store: { id: string; shippingFee: Prisma.Decimal; freeShippingAbove: Prisma.Decimal | null },
+    governorateId: number,
+    subtotal: Prisma.Decimal,
+  ): Promise<Prisma.Decimal> {
+    if (store.freeShippingAbove && subtotal.gte(store.freeShippingAbove)) {
+      return new Prisma.Decimal(0);
+    }
+    const rate = await this.prisma.shippingRate.findUnique({
+      where: { storeId_governorateId: { storeId: store.id, governorateId } },
+    });
+    return rate ? rate.fee : store.shippingFee;
+  }
 
   /** إنشاء طلب COD من واجهة المتجر — عام، بدون تسجيل (القسم 6.3) */
   async checkout(slug: string, data: CheckoutData) {
@@ -105,8 +129,26 @@ export class OrdersService {
       };
     });
 
-    const shippingFee = store.shippingFee;
-    const total = subtotal.add(shippingFee);
+    const shippingFee = await this.computeShipping(
+      store,
+      data.governorateId,
+      subtotal,
+    );
+
+    // الكوبون (القسم 9.1) — التحقق النهائي داخل الإنشاء
+    let couponId: string | null = null;
+    let discount = new Prisma.Decimal(0);
+    if (data.couponCode) {
+      const result = await this.coupons.validate(
+        store.id,
+        data.couponCode,
+        subtotal,
+      );
+      couponId = result.coupon.id;
+      discount = result.discount;
+    }
+
+    const total = subtotal.sub(discount).add(shippingFee);
     // تأكيد COD هاتفياً مفعّل → الطلب يبدأ "جديد — قيد المراجعة" (القسم 7.1)
     const initialStatus = "NEW" as const;
 
@@ -126,6 +168,7 @@ export class OrdersService {
           }
         }
       }
+      if (couponId) await this.coupons.consume(tx, couponId);
       return tx.order.create({
         data: {
           code: trackingCode(),
@@ -142,6 +185,8 @@ export class OrdersService {
           paymentMethod: "COD",
           status: initialStatus,
           subtotal,
+          couponCode: data.couponCode?.trim().toUpperCase(),
+          discount,
           shippingFee,
           total,
           currency: store.currency,
@@ -154,8 +199,54 @@ export class OrdersService {
       });
     });
 
-    // TODO المرحلة 2: إشعار واتساب فوري للعميل والتاجر (القسم 26.2.1 بالملحق)
+    // إشعارات واتساب عبر الطابور — لا تعطّل استجابة الطلب لو تعثّرت
+    const trackUrl = `${WEB_URL}/track/${order.code}`;
+    await Promise.allSettled([
+      this.notifications.enqueue({
+        storeId: store.id,
+        orderId: order.id,
+        recipient: phone,
+        template: "ORDER_CONFIRMED_CUSTOMER",
+        body: TEMPLATES.ORDER_CONFIRMED_CUSTOMER(order as any, store.name, trackUrl),
+      }),
+      ...(store.whatsapp
+        ? [
+            this.notifications.enqueue({
+              storeId: store.id,
+              orderId: order.id,
+              recipient: store.whatsapp,
+              template: "NEW_ORDER_MERCHANT",
+              body: TEMPLATES.NEW_ORDER_MERCHANT(order as any, `${WEB_URL}/dashboard`),
+            }),
+          ]
+        : []),
+      this.notifyLowStock(store, itemsData.map((i) => i.productId)),
+    ]);
+
     return { order, duplicate: false };
+  }
+
+  /** تنبيه نقص المخزون للتاجر بعد البيع (القسم 5.3) */
+  private async notifyLowStock(
+    store: { id: string; whatsapp: string | null },
+    productIds: string[],
+  ) {
+    if (!store.whatsapp) return;
+    const lowProducts = await this.prisma.product.findMany({
+      where: {
+        id: { in: productIds },
+        trackStock: true,
+        stock: { lte: LOW_STOCK_THRESHOLD },
+      },
+    });
+    for (const p of lowProducts) {
+      await this.notifications.enqueue({
+        storeId: store.id,
+        recipient: store.whatsapp,
+        template: "LOW_STOCK_MERCHANT",
+        body: TEMPLATES.LOW_STOCK_MERCHANT(p.name, p.stock, `${WEB_URL}/dashboard`),
+      });
+    }
   }
 
   /** تتبع عام برمز الطلب — يعمل بدون تسجيل دخول (القسم 6.3) */
@@ -177,13 +268,56 @@ export class OrdersService {
 
   // ---- نقاط نهاية التاجر ----
 
-  async list(storeId: string, ownerId: string, status?: string) {
+  async list(
+    storeId: string,
+    ownerId: string,
+    opts: { status?: string; q?: string; page?: number } = {},
+  ) {
     await this.stores.ownedByOrThrow(storeId, ownerId);
-    return this.prisma.order.findMany({
-      where: { storeId, ...(status ? { status: status as any } : {}) },
-      include: { items: true, governorate: true, district: true },
-      orderBy: { createdAt: "desc" },
+    const PAGE_SIZE = 20;
+    const page = Math.max(1, opts.page ?? 1);
+    const where = {
+      storeId,
+      ...(opts.status ? { status: opts.status as any } : {}),
+      // بحث برمز الطلب أو اسم العميل أو جواله (القسم 12.1)
+      ...(opts.q
+        ? {
+            OR: [
+              { code: { contains: opts.q.toUpperCase() } },
+              { customerName: { contains: opts.q } },
+              { customerPhone: { contains: opts.q.replace(/\D/g, "") } },
+            ],
+          }
+        : {}),
+    };
+    const [orders, count] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        include: { items: true, governorate: true, district: true },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * PAGE_SIZE,
+        take: PAGE_SIZE,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return { orders, count, page, pages: Math.ceil(count / PAGE_SIZE) };
+  }
+
+  /** طلب واحد بالتفصيل — لصفحة البوليصة والطباعة (القسم 8.3) */
+  async getOne(storeId: string, ownerId: string, orderId: string) {
+    await this.stores.ownedByOrThrow(storeId, ownerId);
+    const order = await this.prisma.order.findFirst({
+      where: { id: orderId, storeId },
+      include: {
+        items: true,
+        governorate: true,
+        district: true,
+        events: { orderBy: { createdAt: "asc" } },
+        store: { select: { name: true, whatsapp: true, city: true } },
+      },
     });
+    if (!order) throw new NotFoundException("الطلب غير موجود");
+    return order;
   }
 
   async updateStatus(
@@ -225,9 +359,26 @@ export class OrdersService {
       const updated = await tx.order.update({
         where: { id: orderId },
         data: { status, events: { create: { status, note } } },
-        include: { items: true, events: { orderBy: { createdAt: "asc" } } },
+        include: {
+          items: true,
+          events: { orderBy: { createdAt: "asc" } },
+          store: { select: { name: true } },
+        },
       });
-      // TODO المرحلة 2: إشعار واتساب للعميل بكل تغيير حالة (القسم 7.1)
+      return updated;
+    }).then(async (updated) => {
+      // إشعار واتساب للعميل بكل تغيير حالة (القسم 7.1)
+      await this.notifications.enqueue({
+        storeId,
+        orderId: updated.id,
+        recipient: updated.customerPhone,
+        template: "ORDER_STATUS_CUSTOMER",
+        body: TEMPLATES.ORDER_STATUS_CUSTOMER(
+          updated as any,
+          updated.store.name,
+          `${WEB_URL}/track/${updated.code}`,
+        ),
+      });
       return updated;
     });
   }

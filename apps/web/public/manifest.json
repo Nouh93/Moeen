@@ -1,0 +1,19 @@
+{
+  "name": "مُعين — منصة المتاجر اليمنية",
+  "short_name": "مُعين",
+  "description": "تسوّق وأدر متجرك — الدفع عند الاستلام والتوصيل داخل اليمن",
+  "start_url": "/",
+  "display": "standalone",
+  "dir": "rtl",
+  "lang": "ar",
+  "background_color": "#f9fafb",
+  "theme_color": "#115e59",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

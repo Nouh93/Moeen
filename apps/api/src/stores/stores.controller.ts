@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   Patch,
@@ -70,13 +71,35 @@ class UpdateStoreDto {
   whatsapp?: string;
 
   @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
   shippingFee?: number;
 
   @IsOptional()
+  @IsNumber()
+  @Min(0)
+  freeShippingAbove?: number | null;
+
+  @IsOptional()
   @IsBoolean()
   codConfirmation?: boolean;
+}
+
+class UpsertShippingRateDto {
+  @IsInt()
+  governorateId: number;
+
+  @IsNumber()
+  @Min(0)
+  fee: number;
+
+  @IsOptional()
+  @IsString()
+  etaText?: string;
 }
 
 @Controller()
@@ -105,6 +128,40 @@ export class StoresController {
     @Body() dto: UpdateStoreDto,
   ) {
     return this.stores.update(id, user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("stores/:id/stats")
+  stats(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.stores.stats(id, user.sub);
+  }
+
+  // ---- أسعار الشحن ----
+
+  @UseGuards(JwtAuthGuard)
+  @Get("stores/:id/shipping-rates")
+  listRates(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.stores.listShippingRates(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("stores/:id/shipping-rates")
+  upsertRate(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() dto: UpsertShippingRateDto,
+  ) {
+    return this.stores.upsertShippingRate(id, user.sub, dto);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete("stores/:id/shipping-rates/:rateId")
+  deleteRate(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Param("rateId") rateId: string,
+  ) {
+    return this.stores.deleteShippingRate(id, user.sub, rateId);
   }
 
   // ---- واجهة المتجر العامة ----

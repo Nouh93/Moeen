@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
-import { api, formatPrice } from "@/lib/api";
+import { api, formatPrice, imgUrl } from "@/lib/api";
 import { CartItem, clearCart, getCart, saveCart } from "@/lib/cart";
 
 interface Governorate {
@@ -44,6 +44,11 @@ export default function CartPage({
     | { phase: "error"; message: string }
   >({ phase: "idle" });
 
+  // الكوبون (القسم 9.1)
+  const [couponInput, setCouponInput] = useState("");
+  const [coupon, setCoupon] = useState<{ code: string; discount: number } | null>(null);
+  const [couponError, setCouponError] = useState("");
+
   // مفتاح idempotency ثابت لهذه السلة حتى نجاح الإرسال
   const idempotencyKey = useMemo(() => {
     if (typeof window === "undefined") return "";
@@ -60,11 +65,46 @@ export default function CartPage({
     setItems(getCart(slug));
     api(`/public/stores/${encodeURIComponent(slug)}`).then(setStore).catch(() => {});
     api<Governorate[]>(`/public/yemen/governorates`).then(setGovernorates).catch(() => {});
+    // تذكّر بيانات العميل من آخر طلب — عودة أسرع (القسم 6.4)
+    try {
+      const saved = JSON.parse(localStorage.getItem("moeen-customer") ?? "null");
+      if (saved) setForm((f) => ({ ...f, ...saved }));
+    } catch {}
   }, [slug]);
 
   const subtotal = items.reduce((s, i) => s + i.price * i.quantity, 0);
-  const shipping = store ? Number(store.shippingFee) : 0;
   const selectedGov = governorates.find((g) => g.id === form.governorateId);
+
+  // الشحن حسب المحافظة + التوصيل المجاني (القسم 8.2) — الحساب النهائي على السيرفر
+  const rate = store?.shippingRates?.find(
+    (r: any) => r.governorateId === form.governorateId,
+  );
+  const freeShipping =
+    store?.freeShippingAbove && subtotal >= Number(store.freeShippingAbove);
+  const shipping = !store
+    ? 0
+    : freeShipping
+      ? 0
+      : Number(rate ? rate.fee : store.shippingFee);
+  const discount = coupon ? Math.min(coupon.discount, subtotal) : 0;
+
+  async function applyCoupon() {
+    setCouponError("");
+    if (!couponInput.trim()) return;
+    try {
+      const res = await api<{ code: string; discount: string }>(
+        `/public/stores/${encodeURIComponent(slug)}/coupons/validate`,
+        {
+          method: "POST",
+          body: JSON.stringify({ code: couponInput, subtotal }),
+        },
+      );
+      setCoupon({ code: res.code, discount: Number(res.discount) });
+    } catch (e: any) {
+      setCoupon(null);
+      setCouponError(e.message);
+    }
+  }
 
   function setQty(productId: string, qty: number) {
     const next = items
@@ -88,6 +128,7 @@ export default function CartPage({
       districtId: form.districtId ? Number(form.districtId) : undefined,
       districtText: form.districtText || undefined,
       courierNote: form.courierNote || undefined,
+      couponCode: coupon?.code,
       idempotencyKey,
       items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
     };
@@ -95,6 +136,19 @@ export default function CartPage({
       const res = await api<{ order: { code: string } }>(
         `/public/stores/${encodeURIComponent(slug)}/orders`,
         { method: "POST", body: JSON.stringify(payload) },
+      );
+      // حفظ بيانات العميل لطلبه القادم
+      localStorage.setItem(
+        "moeen-customer",
+        JSON.stringify({
+          customerName: form.customerName,
+          customerPhone: form.customerPhone,
+          governorateId: form.governorateId,
+          districtId: form.districtId,
+          districtText: form.districtText,
+          neighborhood: form.neighborhood,
+          addressDetails: form.addressDetails,
+        }),
       );
       clearCart(slug);
       localStorage.removeItem(`moeen-idem-${slug}`);
@@ -177,7 +231,7 @@ export default function CartPage({
                   <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-2xl shrink-0">
                     {i.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={i.imageUrl} alt="" className="w-full h-full object-cover rounded-lg" />
+                      <img src={imgUrl(i.imageUrl)} alt="" className="w-full h-full object-cover rounded-lg" />
                     ) : (
                       "🛍️"
                     )}
@@ -265,18 +319,61 @@ export default function CartPage({
               />
             </div>
 
+            {/* الكوبون */}
+            <div className="bg-white rounded-xl border mt-4 p-4">
+              <div className="flex gap-2">
+                <input
+                  className="border rounded-lg px-3 py-2 flex-1 font-mono"
+                  placeholder="🎟️ عندك كوبون خصم؟"
+                  dir="ltr"
+                  value={couponInput}
+                  onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
+                />
+                <button onClick={applyCoupon} className="bg-gray-900 text-white rounded-lg px-4 font-bold text-sm">
+                  تطبيق
+                </button>
+              </div>
+              {coupon && (
+                <div className="mt-2 text-sm text-green-700 flex items-center justify-between">
+                  <span>✓ كوبون {coupon.code} مطبّق</span>
+                  <button onClick={() => setCoupon(null)} className="text-gray-400 text-xs underline">
+                    إزالة
+                  </button>
+                </div>
+              )}
+              {couponError && <div className="mt-2 text-sm text-red-600">{couponError}</div>}
+            </div>
+
             <div className="bg-white rounded-xl border mt-4 p-4">
               <div className="flex justify-between text-sm">
                 <span>المجموع</span>
                 <span className="font-semibold">{store && formatPrice(subtotal, store.currency)}</span>
               </div>
+              {discount > 0 && (
+                <div className="flex justify-between text-sm mt-1 text-green-700">
+                  <span>الخصم ({coupon!.code})</span>
+                  <span className="font-semibold">− {store && formatPrice(discount, store.currency)}</span>
+                </div>
+              )}
               <div className="flex justify-between text-sm mt-1">
-                <span>التوصيل</span>
-                <span className="font-semibold">{store && formatPrice(shipping, store.currency)}</span>
+                <span>
+                  التوصيل
+                  {selectedGov ? ` — ${selectedGov.nameAr}` : ""}
+                  {rate?.etaText ? ` (${rate.etaText})` : ""}
+                </span>
+                <span className="font-semibold">
+                  {freeShipping ? (
+                    <span className="text-green-700">مجاني 🎉</span>
+                  ) : (
+                    store && formatPrice(shipping, store.currency)
+                  )}
+                </span>
               </div>
               <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
                 <span>الإجمالي — تدفعه عند الاستلام 💵</span>
-                <span className="text-brand-700">{store && formatPrice(subtotal + shipping, store.currency)}</span>
+                <span className="text-brand-700">
+                  {store && formatPrice(subtotal - discount + shipping, store.currency)}
+                </span>
               </div>
             </div>
 

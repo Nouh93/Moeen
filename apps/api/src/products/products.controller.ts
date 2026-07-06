@@ -59,6 +59,12 @@ class CreateProductDto {
   @IsOptional()
   @IsString()
   categoryId?: string | null;
+
+  @IsOptional()
+  images?: string[];
+
+  @IsOptional()
+  variants?: { id?: string; name: string; price?: number; stock?: number }[];
 }
 
 class UpdateProductDto extends CreateProductDto {

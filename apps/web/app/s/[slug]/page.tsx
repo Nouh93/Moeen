@@ -1,6 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { MessageCircle, Truck } from "lucide-react";
+import { BadgeCheck, Medal, MessageCircle, Star, Truck } from "lucide-react";
 import { api, imgUrl } from "@/lib/api";
 import { CartLink } from "./cart-widgets";
 import { ProductsBrowser } from "./products-browser";
@@ -55,11 +55,30 @@ export default async function StorePage({
               />
             )}
             <div className="min-w-0">
-              <h1 className="text-2xl font-bold truncate">{store.name}</h1>
+              <h1 className="text-2xl font-bold truncate flex items-center gap-2">
+                {store.name}
+                {store.badges?.trusted && (
+                  <span className="text-xs bg-amber-400 text-brand-950 font-bold rounded-full px-2.5 py-1 inline-flex items-center gap-1 shrink-0">
+                    <Medal size={13} /> متجر موثوق
+                  </span>
+                )}
+                {!store.badges?.trusted && store.badges?.verified && (
+                  <span className="text-xs bg-white/15 text-white font-bold rounded-full px-2.5 py-1 inline-flex items-center gap-1 shrink-0">
+                    <BadgeCheck size={13} className="text-amber-300" /> هوية موثّقة
+                  </span>
+                )}
+              </h1>
               {store.description && (
                 <p className="text-brand-100 text-sm mt-1 line-clamp-1">{store.description}</p>
               )}
-              <p className="text-brand-100 text-xs mt-1">
+              <p className="text-brand-100 text-xs mt-1 flex items-center gap-2 flex-wrap">
+                {store.rating?.count > 0 && (
+                  <span className="inline-flex items-center gap-1">
+                    <Star size={12} className="text-amber-300 fill-amber-300" />
+                    {Number(store.rating.average).toFixed(1)} ({store.rating.count})
+                  </span>
+                )}
+                {store.deliveredOrders > 0 && <span>أكمل {store.deliveredOrders} طلباً ·</span>}
                 {store.governorate?.nameAr}
                 {store.city ? ` — ${store.city}` : ""}
                 {store.freeShippingAbove && (

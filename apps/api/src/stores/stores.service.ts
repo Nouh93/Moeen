@@ -98,7 +98,7 @@ export class StoresService {
     return this.prisma.store.update({ where: { id: storeId }, data });
   }
 
-  /** واجهة المتجر العامة: بيانات المتجر + منتجاته الظاهرة فقط */
+  /** واجهة المتجر العامة: بيانات المتجر + منتجاته + شارات الثقة (القسم 25.1) */
   async publicBySlug(slug: string) {
     const store = await this.prisma.store.findUnique({
       where: { slug },
@@ -109,6 +109,7 @@ export class StoresService {
         products: {
           where: { status: "ACTIVE" },
           orderBy: { createdAt: "desc" },
+          include: { variants: { orderBy: { sortOrder: "asc" } } },
         },
       },
     });
@@ -116,8 +117,42 @@ export class StoresService {
       // المتجر المعلَّق يُخفى من الزوار — القسم 24.5 بالملحق
       throw new NotFoundException("المتجر غير موجود أو موقوف حالياً");
     }
+
+    // شارات الثقة والشفافية (القسمان 25.1 و25.3)
+    const [rating, delivered, total] = await Promise.all([
+      this.prisma.review.aggregate({
+        where: { storeId: store.id, status: "VISIBLE" },
+        _avg: { rating: true },
+        _count: true,
+      }),
+      this.prisma.order.count({ where: { storeId: store.id, status: "DELIVERED" } }),
+      this.prisma.order.count({
+        where: { storeId: store.id, status: { in: ["DELIVERED", "CANCELLED", "RETURNED"] } },
+      }),
+    ]);
+    const completionRate = total > 0 ? delivered / total : 1;
+    const ageDays = (Date.now() - store.createdAt.getTime()) / 86_400_000;
+    // شارة «متجر موثوق» 🏅 — معايير القسم 25.1.1
+    const trusted =
+      store.kycLevel >= 2 &&
+      ageDays >= 90 &&
+      (rating._avg.rating ?? 0) >= 4 &&
+      rating._count >= 5 &&
+      completionRate >= 0.85;
+
     const { ownerId, ...pub } = store;
-    return pub;
+    return {
+      ...pub,
+      badges: {
+        verified: store.kycLevel >= 1, // «هوية موثّقة» ✓ (25.1.3)
+        trusted,
+      },
+      rating: {
+        average: rating._avg.rating ?? 0,
+        count: rating._count,
+      },
+      deliveredOrders: delivered, // «أكمل X طلباً» علناً (25.3)
+    };
   }
 
   // ---- أسعار الشحن لكل محافظة (القسم 8.2) ----

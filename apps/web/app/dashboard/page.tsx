@@ -7,6 +7,7 @@ import { api } from "@/lib/api";
 import { BrandLogo } from "../components/brand";
 import {
   CreditCard,
+  Star,
   ExternalLink,
   LayoutDashboard,
   Package,
@@ -21,6 +22,7 @@ import { Products } from "./components/products";
 import { Coupons } from "./components/coupons";
 import { Settings } from "./components/settings";
 import { Subscription } from "./components/subscription";
+import { Reviews } from "./components/reviews";
 
 /** لوحة تحكم التاجر — تعمل كاملة من متصفح الجوال (القسم 12.1) */
 export default function Dashboard() {
@@ -164,6 +166,7 @@ const TABS = [
   ["orders", "الطلبات", Package],
   ["products", "المنتجات", ShoppingBag],
   ["coupons", "الكوبونات", TicketPercent],
+  ["reviews", "التقييمات", Star],
   ["subscription", "الاشتراك", CreditCard],
   ["settings", "الإعدادات", SettingsIcon],
 ] as const;
@@ -174,6 +177,10 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
   const [stores, setStores] = useState<any[] | null>(null);
   const [tab, setTab] = useState<TabId>("overview");
   const [error, setError] = useState("");
+  const [storeId, setStoreId] = useState<string>(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("moeen-store") ?? "") : "",
+  );
+  const [creating, setCreating] = useState(false);
 
   const load = useCallback(() => {
     api<any[]>("/stores/mine", { token })
@@ -188,23 +195,58 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
 
   if (error) return <div className="p-8 text-red-600">{error}</div>;
   if (!stores) return <div className="p-8 text-gray-500">جارٍ التحميل...</div>;
-  if (stores.length === 0) return <CreateStore token={token} onCreated={load} />;
+  if (stores.length === 0 || creating)
+    return (
+      <CreateStore
+        token={token}
+        onCreated={() => {
+          setCreating(false);
+          load();
+        }}
+      />
+    );
 
-  const store = stores[0];
+  const store = stores.find((s) => s.id === storeId) ?? stores[0];
 
   return (
     <main className="min-h-screen">
       <header className="brand-header text-white">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
-            <div className="font-bold text-lg">{store.name}</div>
+            {stores.length > 1 ? (
+              <select
+                className="bg-white/10 border border-white/20 rounded-lg px-2 py-1 font-bold text-white text-sm"
+                value={store.id}
+                onChange={(e) => {
+                  setStoreId(e.target.value);
+                  localStorage.setItem("moeen-store", e.target.value);
+                }}
+              >
+                {stores.map((s) => (
+                  <option key={s.id} value={s.id} className="text-gray-900">
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <div className="font-bold text-lg">{store.name}</div>
+            )}
             <a href={`/s/${store.slug}`} target="_blank" className="text-brand-200 text-xs underline inline-flex items-center gap-1">
               <ExternalLink size={12} /> /s/{store.slug} — افتح متجرك
             </a>
           </div>
-          <button onClick={onLogout} className="text-sm bg-white/15 rounded-lg px-3 py-1.5 hover:bg-white/25">
-            خروج
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setCreating(true)}
+              className="text-xs bg-white/15 rounded-lg px-3 py-1.5 hover:bg-white/25"
+              title="متجر جديد"
+            >
+              + متجر
+            </button>
+            <button onClick={onLogout} className="text-sm bg-white/15 rounded-lg px-3 py-1.5 hover:bg-white/25">
+              خروج
+            </button>
+          </div>
         </div>
         <nav className="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto">
           {TABS.map(([id, label, Icon]) => (
@@ -245,6 +287,7 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
         {tab === "orders" && <Orders token={token} store={store} />}
         {tab === "products" && <Products token={token} store={store} />}
         {tab === "coupons" && <Coupons token={token} store={store} />}
+        {tab === "reviews" && <Reviews token={token} store={store} />}
         {tab === "subscription" && <Subscription token={token} store={store} onChanged={load} />}
         {tab === "settings" && <Settings token={token} store={store} onSaved={load} />}
       </div>

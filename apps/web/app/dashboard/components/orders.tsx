@@ -8,6 +8,7 @@ import {
 } from "@moeen/shared";
 import {
   Banknote,
+  Download,
   MapPin,
   MessageCircle,
   Printer,
@@ -62,6 +63,39 @@ export function Orders({ token, store }: { token: string; store: any }) {
 
   useEffect(load, [load]);
 
+  async function exportCsv() {
+    // تصدير كل الطلبات (كل الصفحات) إلى ملف CSV بترميز يدعم العربية في Excel
+    const all: any[] = [];
+    for (let p = 1; ; p++) {
+      const res: any = await api(`/stores/${store.id}/orders?page=${p}`, { token });
+      all.push(...res.orders);
+      if (p >= res.pages) break;
+    }
+    const rows = [
+      ["رمز الطلب", "التاريخ", "الحالة", "العميل", "الجوال", "المحافظة", "العنوان", "المنتجات", "الخصم", "الشحن", "الإجمالي"],
+      ...all.map((o) => [
+        o.code,
+        new Date(o.createdAt).toLocaleString("ar-u-nu-latn"),
+        ORDER_STATUS_AR[o.status as OrderStatus],
+        o.customerName,
+        o.customerPhone,
+        o.governorate?.nameAr ?? "",
+        `${o.neighborhood} — ${o.addressDetails}`,
+        o.items.map((i: any) => `${i.name} ×${i.quantity}`).join(" | "),
+        o.discount,
+        o.shippingFee,
+        o.total,
+      ]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replaceAll('"', '""')}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `moeen-orders-${store.slug}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
   async function setStatus(orderId: string, status: string) {
     try {
       await api(`/stores/${store.id}/orders/${orderId}/status`, {
@@ -92,6 +126,12 @@ export function Orders({ token, store }: { token: string; store: any }) {
             {f.label}
           </button>
         ))}
+        <button
+          onClick={exportCsv}
+          className="border rounded-lg px-3 py-1.5 text-sm font-semibold hover:bg-gray-50 inline-flex items-center gap-1.5"
+        >
+          <Download size={14} /> تصدير CSV
+        </button>
         <input
           className="border rounded-lg px-3 py-1.5 text-sm flex-1 min-w-40"
           placeholder="بحث برمز الطلب أو اسم/جوال العميل"

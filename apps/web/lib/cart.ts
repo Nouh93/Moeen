@@ -6,10 +6,15 @@
  */
 export interface CartItem {
   productId: string;
-  name: string;
+  variantId?: string;
+  name: string; // يشمل اسم الخيار إن وُجد
   price: number;
   imageUrl?: string | null;
   quantity: number;
+}
+
+export function itemKey(i: { productId: string; variantId?: string }): string {
+  return `${i.productId}:${i.variantId ?? ""}`;
 }
 
 const key = (slug: string) => `moeen-cart-${slug}`;
@@ -30,7 +35,7 @@ export function saveCart(slug: string, items: CartItem[]) {
 
 export function addToCart(slug: string, item: Omit<CartItem, "quantity">) {
   const items = getCart(slug);
-  const existing = items.find((i) => i.productId === item.productId);
+  const existing = items.find((i) => itemKey(i) === itemKey(item));
   if (existing) existing.quantity += 1;
   else items.push({ ...item, quantity: 1 });
   saveCart(slug, items);

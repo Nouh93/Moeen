@@ -12,6 +12,10 @@ import { CouponsModule } from "./coupons/coupons.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { UploadsModule } from "./uploads/uploads.module";
 import { BillingModule } from "./billing/billing.module";
+import { AdminModule } from "./admin/admin.module";
+import { KycModule } from "./kyc/kyc.module";
+import { ReviewsModule } from "./reviews/reviews.module";
+import { CartsModule } from "./carts/carts.module";
 
 @Module({
   imports: [
@@ -28,6 +32,10 @@ import { BillingModule } from "./billing/billing.module";
     NotificationsModule,
     UploadsModule,
     BillingModule,
+    AdminModule,
+    KycModule,
+    ReviewsModule,
+    CartsModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

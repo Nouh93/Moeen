@@ -30,6 +30,10 @@ class CheckoutItemDto {
   @IsNotEmpty()
   productId: string;
 
+  @IsOptional()
+  @IsString()
+  variantId?: string;
+
   @IsInt()
   @Min(1)
   quantity: number;

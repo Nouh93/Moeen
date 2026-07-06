@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { CURRENCY_AR } from "@moeen/shared";
 import { Camera, Store as StoreIcon } from "lucide-react";
 import { api, imgUrl, uploadFile } from "@/lib/api";
+import { KycSection } from "./kyc-section";
 
 export function Settings({
   token,
@@ -96,6 +97,7 @@ export function Settings({
 
   return (
     <div className="grid lg:grid-cols-2 gap-4 items-start">
+      <KycSection token={token} store={store} />
       <div className="card p-4 space-y-3">
         <h3 className="font-bold">بيانات المتجر</h3>
 

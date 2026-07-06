@@ -27,6 +27,14 @@ async function main() {
   }
   console.log("✅ المحافظات والمديريات");
 
+  // مدير المنصة (Super Admin) — القسم 14
+  await prisma.user.upsert({
+    where: { phone: "+967700000001" },
+    create: { phone: "+967700000001", name: "إدارة مُعين", role: "ADMIN" },
+    update: { role: "ADMIN" },
+  });
+  console.log("✅ مدير المنصة: 700000001");
+
   if (process.env.SEED_DEMO !== "0") {
     const owner = await prisma.user.upsert({
       where: { phone: "+967771234567" },

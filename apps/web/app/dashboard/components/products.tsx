@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, ImageIcon, Pencil, Plus } from "lucide-react";
+import { Camera, ImageIcon, Images, Pencil, Plus, X } from "lucide-react";
 import { api, formatPrice, imgUrl, uploadFile } from "@/lib/api";
 
 const EMPTY_FORM = {
@@ -10,9 +10,11 @@ const EMPTY_FORM = {
   price: "",
   compareAtPrice: "",
   imageUrl: "",
+  images: [] as string[],
   trackStock: false,
   stock: "0",
   categoryId: "",
+  variants: [] as { id?: string; name: string; price: string; stock: string }[],
 };
 
 export function Products({ token, store }: { token: string; store: any }) {
@@ -45,9 +47,16 @@ export function Products({ token, store }: { token: string; store: any }) {
       price: String(p.price),
       compareAtPrice: p.compareAtPrice ? String(p.compareAtPrice) : "",
       imageUrl: p.imageUrl ?? "",
+      images: (p.images as string[]) ?? [],
       trackStock: p.trackStock,
       stock: String(p.stock),
       categoryId: p.categoryId ?? "",
+      variants: (p.variants ?? []).map((v: any) => ({
+        id: v.id,
+        name: v.name,
+        price: v.price ? String(v.price) : "",
+        stock: String(v.stock),
+      })),
     });
     setEditing(p);
   }
@@ -78,9 +87,18 @@ export function Products({ token, store }: { token: string; store: any }) {
       price: Number(form.price),
       compareAtPrice: form.compareAtPrice ? Number(form.compareAtPrice) : undefined,
       imageUrl: form.imageUrl || undefined,
+      images: form.images,
       trackStock: form.trackStock,
       stock: Number(form.stock) || 0,
       categoryId: form.categoryId || undefined,
+      variants: form.variants
+        .filter((v) => v.name.trim())
+        .map((v) => ({
+          id: v.id,
+          name: v.name.trim(),
+          price: v.price ? Number(v.price) : undefined,
+          stock: Number(v.stock) || 0,
+        })),
     };
     try {
       if (editing?.id) {
@@ -245,6 +263,110 @@ export function Products({ token, store }: { token: string; store: any }) {
                   حذف
                 </button>
               )}
+            </div>
+          </div>
+
+          {/* صور إضافية — حتى 10 صور (القسم 5.2) */}
+          <div>
+            <div className="text-xs text-gray-500 mb-1.5 flex items-center gap-1.5">
+              <Images size={13} /> صور إضافية ({form.images.length}/9)
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {form.images.map((url, i) => (
+                <div key={url} className="relative w-16 h-16">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={imgUrl(url)} alt="" className="w-full h-full object-cover rounded-lg" />
+                  <button
+                    onClick={() => setForm({ ...form, images: form.images.filter((_, j) => j !== i) })}
+                    className="absolute -top-1.5 -left-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+              {form.images.length < 9 && (
+                <label className="w-16 h-16 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer text-gray-400 hover:border-brand-400">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={async (e) => {
+                      const files = Array.from(e.target.files ?? []).slice(0, 9 - form.images.length);
+                      setUploading(true);
+                      try {
+                        const urls: string[] = [];
+                        for (const f of files) urls.push(await uploadFile(f, token));
+                        setForm((prev) => ({ ...prev, images: [...prev.images, ...urls] }));
+                      } catch (err: any) {
+                        setError(err.message);
+                      } finally {
+                        setUploading(false);
+                      }
+                    }}
+                  />
+                  <Plus size={20} />
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* خيارات المنتج: مقاس/لون بسعر ومخزون مستقلين (القسم 5.1) */}
+          <div>
+            <div className="text-xs text-gray-500 mb-1.5">
+              خيارات المنتج (مقاس / لون...) — اتركها فارغة إن لم يكن للمنتج خيارات
+            </div>
+            <div className="space-y-2">
+              {form.variants.map((v, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    className="border rounded-lg px-2 py-1.5 text-sm flex-1"
+                    placeholder="الخيار (مثال: أحمر / L)"
+                    value={v.name}
+                    onChange={(e) => {
+                      const variants = [...form.variants];
+                      variants[i] = { ...v, name: e.target.value };
+                      setForm({ ...form, variants });
+                    }}
+                  />
+                  <input
+                    type="number"
+                    className="border rounded-lg px-2 py-1.5 text-sm w-28"
+                    placeholder="سعر خاص"
+                    value={v.price}
+                    onChange={(e) => {
+                      const variants = [...form.variants];
+                      variants[i] = { ...v, price: e.target.value };
+                      setForm({ ...form, variants });
+                    }}
+                  />
+                  <input
+                    type="number"
+                    className="border rounded-lg px-2 py-1.5 text-sm w-20"
+                    placeholder="الكمية"
+                    value={v.stock}
+                    onChange={(e) => {
+                      const variants = [...form.variants];
+                      variants[i] = { ...v, stock: e.target.value };
+                      setForm({ ...form, variants });
+                    }}
+                  />
+                  <button
+                    onClick={() => setForm({ ...form, variants: form.variants.filter((_, j) => j !== i) })}
+                    className="text-gray-400 hover:text-red-500"
+                  >
+                    <X size={16} />
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={() =>
+                  setForm({ ...form, variants: [...form.variants, { name: "", price: "", stock: "0" }] })
+                }
+                className="text-brand-600 text-xs font-bold"
+              >
+                + أضف خياراً
+              </button>
             </div>
           </div>
 

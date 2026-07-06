@@ -13,6 +13,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { api, formatPrice } from "@/lib/api";
+import { TrackActions } from "./track-actions";
 
 const STATUS_FLOW: OrderStatus[] = ["NEW", "PROCESSING", "OUT_FOR_DELIVERY", "DELIVERED"];
 const STATUS_ICON: Record<string, any> = {
@@ -126,6 +127,8 @@ export default async function TrackPage({
               </div>
             ))}
           </div>
+
+          <TrackActions order={order} />
 
           {order.store.whatsapp && (
             <a

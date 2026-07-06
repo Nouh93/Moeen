@@ -4,7 +4,7 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { Banknote, ImageIcon, PartyPopper, ShoppingCart, Ticket, WifiOff } from "lucide-react";
 import { api, formatPrice, imgUrl } from "@/lib/api";
-import { CartItem, clearCart, getCart, saveCart } from "@/lib/cart";
+import { CartItem, clearCart, getCart, itemKey, saveCart } from "@/lib/cart";
 
 interface Governorate {
   id: number;
@@ -107,12 +107,27 @@ export default function CartPage({
     }
   }
 
-  function setQty(productId: string, qty: number) {
+  function setQty(key: string, qty: number) {
     const next = items
-      .map((i) => (i.productId === productId ? { ...i, quantity: qty } : i))
+      .map((i) => (itemKey(i) === key ? { ...i, quantity: qty } : i))
       .filter((i) => i.quantity > 0);
     setItems(next);
     saveCart(slug, next);
+  }
+
+  // السلة المهجورة (القسم 9.2): جوال صحيح + سلة فيها منتجات → سجّلها
+  function captureAbandoned() {
+    if (!form.customerPhone || items.length === 0) return;
+    const payload = JSON.stringify({
+      phone: form.customerPhone,
+      items: items.map((i) => ({ name: i.name, quantity: i.quantity })),
+    });
+    try {
+      navigator.sendBeacon(
+        `${process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000"}/public/stores/${encodeURIComponent(slug)}/abandoned-cart`,
+        new Blob([payload], { type: "application/json" }),
+      );
+    } catch {}
   }
 
   async function submit(fromRetry = false) {
@@ -131,7 +146,7 @@ export default function CartPage({
       courierNote: form.courierNote || undefined,
       couponCode: coupon?.code,
       idempotencyKey,
-      items: items.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      items: items.map((i) => ({ productId: i.productId, variantId: i.variantId, quantity: i.quantity })),
     };
     try {
       const res = await api<{ order: { code: string } }>(
@@ -230,7 +245,7 @@ export default function CartPage({
           <>
             <div className="card divide-y">
               {items.map((i) => (
-                <div key={i.productId} className="flex items-center gap-3 p-3">
+                <div key={itemKey(i)} className="flex items-center gap-3 p-3">
                   <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-2xl shrink-0">
                     {i.imageUrl ? (
                       // eslint-disable-next-line @next/next/no-img-element
@@ -246,9 +261,9 @@ export default function CartPage({
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <button onClick={() => setQty(i.productId, i.quantity - 1)} className="w-8 h-8 rounded-lg border font-bold">−</button>
+                    <button onClick={() => setQty(itemKey(i), i.quantity - 1)} className="w-8 h-8 rounded-lg border font-bold">−</button>
                     <span className="w-6 text-center font-bold">{i.quantity}</span>
-                    <button onClick={() => setQty(i.productId, i.quantity + 1)} className="w-8 h-8 rounded-lg border font-bold">+</button>
+                    <button onClick={() => setQty(itemKey(i), i.quantity + 1)} className="w-8 h-8 rounded-lg border font-bold">+</button>
                   </div>
                 </div>
               ))}
@@ -270,6 +285,7 @@ export default function CartPage({
                   dir="ltr"
                   value={form.customerPhone}
                   onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+                  onBlur={captureAbandoned}
                 />
                 <select
                   className="border rounded-lg px-3 py-2.5 w-full bg-white"

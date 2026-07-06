@@ -10,6 +10,7 @@ import {
   normalizeYemeniPhone,
 } from "@moeen/shared";
 import { randomInt } from "crypto";
+import { CartsService } from "../carts/carts.module";
 import { CouponsService } from "../coupons/coupons.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { TEMPLATES } from "../notifications/templates";
@@ -21,6 +22,7 @@ const LOW_STOCK_THRESHOLD = 3;
 
 export interface CheckoutItem {
   productId: string;
+  variantId?: string;
   quantity: number;
 }
 
@@ -50,6 +52,7 @@ export class OrdersService {
     private stores: StoresService,
     private coupons: CouponsService,
     private notifications: NotificationsService,
+    private carts: CartsService,
   ) {}
 
   /** حساب رسوم الشحن: سعر المحافظة إن وُجد، وإلا الافتراضي، والمجاني فوق الحد (القسم 8.2) */
@@ -105,6 +108,7 @@ export class OrdersService {
         storeId: store.id,
         status: "ACTIVE",
       },
+      include: { variants: true },
     });
     const byId = new Map(products.map((p) => [p.id, p]));
 
@@ -115,16 +119,31 @@ export class OrdersService {
         throw new BadRequestException("أحد المنتجات لم يعد متوفراً — حدّث سلتك");
       }
       const qty = Math.max(1, Math.floor(item.quantity));
-      if (product.trackStock && product.stock < qty) {
+      // خيار المنتج (مقاس/لون) — سعر ومخزون مستقلان (القسم 5.1)
+      const variant = item.variantId
+        ? product.variants.find((v) => v.id === item.variantId)
+        : undefined;
+      if (item.variantId && !variant) {
+        throw new BadRequestException(`خيار "${product.name}" لم يعد متوفراً — حدّث سلتك`);
+      }
+      if (variant) {
+        if (variant.stock < qty) {
+          throw new BadRequestException(
+            `الكمية المطلوبة من "${product.name} — ${variant.name}" غير متوفرة — المتبقي ${variant.stock}`,
+          );
+        }
+      } else if (product.trackStock && product.stock < qty) {
         throw new BadRequestException(
           `الكمية المطلوبة من "${product.name}" غير متوفرة — المتبقي ${product.stock}`,
         );
       }
-      subtotal = subtotal.add(product.price.mul(qty));
+      const unitPrice = variant?.price ?? product.price;
+      subtotal = subtotal.add(unitPrice.mul(qty));
       return {
         productId: product.id,
-        name: product.name,
-        price: product.price,
+        variantId: variant?.id,
+        name: variant ? `${product.name} — ${variant.name}` : product.name,
+        price: unitPrice,
         quantity: qty,
       };
     });
@@ -156,7 +175,15 @@ export class OrdersService {
       // خصم المخزون داخل نفس المعاملة — القسم 5.3
       for (const item of itemsData) {
         const p = byId.get(item.productId)!;
-        if (p.trackStock) {
+        if (item.variantId) {
+          const updated = await tx.productVariant.updateMany({
+            where: { id: item.variantId, stock: { gte: item.quantity } },
+            data: { stock: { decrement: item.quantity } },
+          });
+          if (updated.count === 0) {
+            throw new BadRequestException(`نفدت كمية "${item.name}" للتو — حدّث سلتك`);
+          }
+        } else if (p.trackStock) {
           const updated = await tx.product.updateMany({
             where: { id: p.id, stock: { gte: item.quantity } },
             data: { stock: { decrement: item.quantity } },
@@ -221,6 +248,7 @@ export class OrdersService {
           ]
         : []),
       this.notifyLowStock(store, itemsData.map((i) => i.productId)),
+      this.carts.clear(store.id, phone),
     ]);
 
     return { order, duplicate: false };
@@ -262,8 +290,17 @@ export class OrdersService {
       },
     });
     if (!order) throw new NotFoundException("لم نجد طلباً بهذا الرمز");
+    const [review, dispute] = await Promise.all([
+      this.prisma.review.findUnique({ where: { orderId: order.id }, select: { id: true } }),
+      this.prisma.dispute.findUnique({ where: { orderId: order.id }, select: { status: true } }),
+    ]);
     // لا نكشف رقم جوال العميل كاملاً في صفحة عامة
-    return { ...order, customerPhone: order.customerPhone.slice(0, -4) + "****" };
+    return {
+      ...order,
+      customerPhone: order.customerPhone.slice(0, -4) + "****",
+      hasReview: !!review,
+      dispute: dispute?.status ?? null,
+    };
   }
 
   // ---- نقاط نهاية التاجر ----
@@ -348,7 +385,12 @@ export class OrdersService {
           include: { product: true },
         });
         for (const item of items) {
-          if (item.product?.trackStock) {
+          if (item.variantId) {
+            await tx.productVariant.update({
+              where: { id: item.variantId },
+              data: { stock: { increment: item.quantity } },
+            });
+          } else if (item.product?.trackStock) {
             await tx.product.update({
               where: { id: item.product.id },
               data: { stock: { increment: item.quantity } },

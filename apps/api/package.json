@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/main.js",
     "db:migrate": "prisma migrate dev",
-    "db:seed": "ts-node -T prisma/seed.ts"
+    "db:seed": "ts-node -T prisma/seed.ts",
+    "test:smoke": "node --test test/smoke.mjs"
   },
   "dependencies": {
     "@moeen/shared": "workspace:*",

@@ -1,5 +1,5 @@
 import { Module } from "@nestjs/common";
-import { YemenController } from "./yemen.controller";
+import { HealthController, YemenController } from "./yemen.controller";
 
-@Module({ controllers: [YemenController] })
+@Module({ controllers: [YemenController, HealthController] })
 export class YemenModule {}

@@ -1,0 +1,81 @@
+# مُعين — تشغيل إنتاجي كامل
+# الاستخدام: انسخ .env.production.example إلى .env ثم:
+#   docker compose -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: moeen
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?حدد DB_PASSWORD في .env}
+      POSTGRES_DB: moeen
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moeen"]
+      interval: 10s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis_data:/data
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://moeen:${DB_PASSWORD}@db:5432/moeen
+      REDIS_URL: redis://redis:6379
+      JWT_SECRET: ${JWT_SECRET:?حدد JWT_SECRET في .env}
+      PAYMENTS_WEBHOOK_SECRET: ${PAYMENTS_WEBHOOK_SECRET:?حدد PAYMENTS_WEBHOOK_SECRET في .env}
+      WEB_URL: ${WEB_URL:?حدد WEB_URL في .env}
+    volumes:
+      - uploads_data:/app/apps/api/uploads
+    ports:
+      - "127.0.0.1:4000:4000"
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${API_PUBLIC_URL:?حدد API_PUBLIC_URL في .env}
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  # نسخ احتياطي يومي (3:30 فجراً) — يحتفظ بآخر 14 نسخة (القسم 22.3.3)
+  backup:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGPASSWORD: ${DB_PASSWORD}
+    volumes:
+      - ./backups:/backups
+    entrypoint: >
+      sh -c 'while true; do
+        sleep $$(( ($$(date -d "tomorrow 03:30" +%s 2>/dev/null || echo $$(($$(date +%s)+86400))) - $$(date +%s)) ));
+        pg_dump -h db -U moeen moeen | gzip > /backups/moeen-$$(date +%Y%m%d-%H%M).sql.gz;
+        ls -t /backups/moeen-*.sql.gz | tail -n +15 | xargs -r rm;
+      done'
+
+volumes:
+  db_data:
+  redis_data:
+  uploads_data:

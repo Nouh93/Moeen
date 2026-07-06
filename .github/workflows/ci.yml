@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: moeen
+          POSTGRES_PASSWORD: moeen_dev
+          POSTGRES_DB: moeen
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U moeen"
+          --health-interval 5s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+
+    env:
+      DATABASE_URL: postgresql://moeen:moeen_dev@localhost:5432/moeen
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: تثبيت الاعتماديات
+        run: pnpm install --frozen-lockfile
+
+      - name: بناء الحزمة المشتركة
+        run: pnpm --filter @moeen/shared build
+
+      - name: فحص أنواع الـ API
+        run: pnpm --filter @moeen/api exec tsc --noEmit
+
+      - name: الهجرات والبذر
+        working-directory: apps/api
+        run: |
+          npx prisma migrate deploy
+          npx prisma generate
+          npx ts-node -T prisma/seed.ts
+
+      - name: تشغيل الـ API
+        working-directory: apps/api
+        run: |
+          nohup pnpm dev > api.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:4000/health && break
+            sleep 2
+          done
+          curl -sf http://localhost:4000/health
+
+      - name: الاختبارات الدخانية
+        run: pnpm --filter @moeen/api test:smoke
+
+      - name: بناء الواجهة
+        run: pnpm --filter @moeen/web build
+        env:
+          NEXT_PUBLIC_API_URL: http://localhost:4000

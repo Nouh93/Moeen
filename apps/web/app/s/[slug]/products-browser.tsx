@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { ImageIcon, Search } from "lucide-react";
 import { formatPrice, imgUrl } from "@/lib/api";
 
 /** شبكة المنتجات مع التصنيفات والبحث — بحث عربي متسامح (القسم 6.5) */
@@ -68,12 +69,15 @@ export function ProductsBrowser({
             ))}
           </>
         )}
-        <input
-          className="border rounded-full px-4 py-1.5 text-sm flex-1 min-w-40 bg-white"
-          placeholder="🔍 ابحث في المتجر"
+        <div className="relative flex-1 min-w-40">
+          <Search size={15} className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+          className="border rounded-full pr-9 pl-4 py-1.5 text-sm w-full bg-white"
+          placeholder="ابحث في المتجر..."
           value={q}
           onChange={(e) => setQ(e.target.value)}
-        />
+          />
+        </div>
       </div>
 
       {visible.length === 0 ? (
@@ -93,7 +97,7 @@ export function ProductsBrowser({
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={imgUrl(p.imageUrl)} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
                 ) : (
-                  "🛍️"
+                  <ImageIcon size={40} className="text-gray-200" strokeWidth={1.2} />
                 )}
               </div>
               <div className="p-3">

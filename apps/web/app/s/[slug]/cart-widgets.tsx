@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { Check, ShoppingCart } from "lucide-react";
 import { addToCart, getCart } from "@/lib/cart";
 
 /** زر السلة في رأس المتجر مع عدّاد */
@@ -20,7 +21,7 @@ export function CartLink({ slug }: { slug: string }) {
       href={`/s/${slug}/cart`}
       className="relative bg-white/15 hover:bg-white/25 rounded-xl px-4 py-2 font-semibold shrink-0"
     >
-      🛒 السلة
+      <span className="inline-flex items-center gap-1.5"><ShoppingCart size={17} /> السلة</span>
       {count > 0 && (
         <span className="absolute -top-2 -left-2 bg-amber-400 text-brand-900 text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center">
           {count}
@@ -56,7 +57,7 @@ export function AddToCartButton({
       }}
       className="flex-1 bg-brand-600 text-white rounded-xl py-3 font-bold text-lg hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
     >
-      {disabled ? "نفدت الكمية" : added ? "أُضيف للسلة ✓" : "أضف للسلة 🛒"}
+      {disabled ? "نفدت الكمية" : added ? (<span className="inline-flex items-center gap-2"><Check size={20} /> أُضيف للسلة</span>) : (<span className="inline-flex items-center gap-2"><ShoppingCart size={20} /> أضف للسلة</span>)}
     </button>
   );
 }

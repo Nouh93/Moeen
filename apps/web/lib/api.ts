@@ -56,5 +56,5 @@ export function formatPrice(value: string | number, currency: string): string {
     USD: "$",
     SAR: "ر.س",
   };
-  return `${n.toLocaleString("ar-YE")} ${label[currency] ?? ""}`.trim();
+  return `${n.toLocaleString("ar-u-nu-latn")} ${label[currency] ?? ""}`.trim();
 }

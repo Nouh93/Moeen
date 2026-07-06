@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ORDER_STATUS_AR, OrderStatus } from "@moeen/shared";
+import { Lightbulb, Trophy } from "lucide-react";
 import { api, formatPrice } from "@/lib/api";
 
 /** نظرة عامة — أرقام كبيرة واضحة، لا رسوم معقدة (القسم 11.1) */
@@ -58,7 +59,7 @@ export function Overview({ token, store }: { token: string; store: any }) {
         </div>
 
         <div className="card p-5">
-          <h3 className="font-bold mb-3">الأكثر مبيعاً 🏆</h3>
+          <h3 className="font-bold mb-3 flex items-center gap-2"><Trophy size={18} className="text-amber-500" /> الأكثر مبيعاً</h3>
           {stats.topProducts.length === 0 ? (
             <p className="text-gray-500 text-sm">لا مبيعات بعد</p>
           ) : (
@@ -77,7 +78,7 @@ export function Overview({ token, store }: { token: string; store: any }) {
       </div>
 
       <div className="bg-brand-50 border border-brand-100 rounded-xl p-4 text-sm text-brand-900">
-        💡 شارك رابط متجرك في حالة الواتساب وبايو إنستجرام:{" "}
+        <Lightbulb size={16} className="inline-block ml-1 text-amber-500" /> شارك رابط متجرك في حالة الواتساب وبايو إنستجرام:{" "}
         <span className="font-mono font-bold" dir="ltr">
           /s/{store.slug}
         </span>

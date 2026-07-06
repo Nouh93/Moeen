@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useEffect, useState } from "react";
+import { Printer, StickyNote } from "lucide-react";
 import { api, formatPrice } from "@/lib/api";
 
 /**
@@ -44,7 +45,7 @@ export default function WaybillPage({
           <div className="text-left">
             <div className="font-mono text-2xl font-bold">{order.code}</div>
             <div className="text-xs text-gray-500" dir="ltr">
-              {new Date(order.createdAt).toLocaleDateString("ar-YE")}
+              {new Date(order.createdAt).toLocaleDateString("ar-u-nu-latn")}
             </div>
           </div>
         </div>
@@ -56,7 +57,7 @@ export default function WaybillPage({
             <div className="text-lg font-bold mt-1" dir="ltr">{order.customerPhone}</div>
           </div>
           <div className="bg-gray-900 text-white rounded-xl p-3 text-center">
-            <div className="text-xs">المبلغ المطلوب تحصيله 💵</div>
+            <div className="text-xs">المبلغ المطلوب تحصيله</div>
             <div className="text-3xl font-bold mt-1">
               {formatPrice(order.total, order.currency)}
             </div>
@@ -74,8 +75,8 @@ export default function WaybillPage({
           </div>
           <div className="text-xl leading-relaxed mt-2">{order.addressDetails}</div>
           {order.courierNote && (
-            <div className="text-lg font-bold mt-3 bg-amber-100 rounded-lg p-2">
-              📝 ملاحظة: {order.courierNote}
+            <div className="text-lg font-bold mt-3 bg-amber-100 rounded-lg p-2 flex items-center gap-2">
+              <StickyNote size={18} /> ملاحظة: {order.courierNote}
             </div>
           )}
         </div>
@@ -98,15 +99,15 @@ export default function WaybillPage({
         </table>
 
         <div className="mt-4 text-center text-xs text-gray-400">
-          بوليصة صادرة من منصة مُعين 🇾🇪 — moeen.ye
+          بوليصة صادرة من منصة مُعين — moeen.ye 🇾🇪
         </div>
       </div>
 
       <button
         onClick={() => window.print()}
-        className="mt-4 w-full bg-brand-600 text-white rounded-xl py-3 font-bold hover:bg-brand-700 print:hidden"
+        className="mt-4 w-full bg-brand-600 text-white rounded-xl py-3 font-bold hover:bg-brand-700 print:hidden flex items-center justify-center gap-2"
       >
-        اطبع البوليصة 🖨️
+        <Printer size={19} /> اطبع البوليصة
       </button>
     </main>
   );

@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { PLANS, PlanId, planPrice } from "@moeen/shared";
+import { Check, FlaskConical, Gift, Wallet } from "lucide-react";
 import { API_URL, api } from "@/lib/api";
 
-const fmt = (v: string | number) => `${Number(v).toLocaleString("ar-YE")} ريال`;
+const fmt = (v: string | number) => `${Number(v).toLocaleString("ar-u-nu-latn")} ريال`;
 
 const INVOICE_STATUS: Record<string, { label: string; cls: string }> = {
   PENDING: { label: "بانتظار السداد", cls: "bg-amber-100 text-amber-700" },
@@ -124,7 +125,7 @@ export function Subscription({
               disabled={busy}
               className="mt-3 bg-amber-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-amber-700 disabled:opacity-60"
             >
-              {busy ? "لحظات..." : "🧪 محاكاة السداد (تطوير)"}
+              {busy ? "لحظات..." : (<span className="inline-flex items-center gap-1.5"><FlaskConical size={15} /> محاكاة السداد (تطوير)</span>)}
             </button>
           )}
         </div>
@@ -140,7 +141,7 @@ export function Subscription({
           {data.currentPeriodEnd && (
             <div className="text-sm text-gray-600 mt-1">
               سارية حتى{" "}
-              {new Date(data.currentPeriodEnd).toLocaleDateString("ar-YE", {
+              {new Date(data.currentPeriodEnd).toLocaleDateString("ar-u-nu-latn", {
                 year: "numeric",
                 month: "long",
                 day: "numeric",
@@ -149,7 +150,7 @@ export function Subscription({
           )}
         </div>
         <div className="card rounded-2xl p-5">
-          <div className="text-sm text-gray-500">💳 محفظتك المسبقة</div>
+          <div className="text-sm text-gray-500 flex items-center gap-1.5"><Wallet size={15} /> محفظتك المسبقة</div>
           <div className="text-2xl font-bold text-brand-700 mt-1">{fmt(data.walletBalance)}</div>
           <p className="text-xs text-gray-500 mt-1 leading-relaxed">
             اشحنها بحوالة أو من أي محفظة بالمرجع{" "}
@@ -162,7 +163,7 @@ export function Subscription({
               disabled={busy}
               className="mt-2 text-sm border border-brand-600 text-brand-700 rounded-lg px-4 py-1.5 font-bold hover:bg-brand-50 disabled:opacity-60"
             >
-              🧪 محاكاة شحن 10,000 (تطوير)
+              <span className="inline-flex items-center gap-1.5"><FlaskConical size={13} /> محاكاة شحن 10,000 (تطوير)</span>
             </button>
           )}
         </div>
@@ -183,7 +184,7 @@ export function Subscription({
               onClick={() => setYearly(true)}
               className={`rounded-full px-4 py-1.5 ${yearly ? "bg-brand-600 text-white" : "text-gray-600"}`}
             >
-              سنوي — شهران مجاناً 🎁
+              <span className="inline-flex items-center gap-1"><Gift size={14} /> سنوي — شهران مجاناً</span>
             </button>
           </div>
         </div>
@@ -209,7 +210,7 @@ export function Subscription({
                 </div>
                 <div className="mt-2">
                   <span className="text-3xl font-bold text-brand-700">
-                    {price === 0 ? "مجاناً" : Number(price).toLocaleString("ar-YE")}
+                    {price === 0 ? "مجاناً" : Number(price).toLocaleString("ar-u-nu-latn")}
                   </span>
                   {price > 0 && (
                     <span className="text-sm text-gray-500"> ريال / {yearly ? "سنة" : "شهر"}</span>
@@ -218,7 +219,7 @@ export function Subscription({
                 <ul className="mt-4 space-y-2 text-sm text-gray-700 flex-1">
                   {plan.features.map((f) => (
                     <li key={f} className="flex gap-2">
-                      <span className="text-brand-600">✓</span> {f}
+                      <Check size={16} className="text-amber-600 shrink-0 mt-0.5" /> {f}
                     </li>
                   ))}
                 </ul>
@@ -268,7 +269,7 @@ export function Subscription({
                   {inv.paidVia ? ` · ${inv.paidVia === "WALLET" ? "من المحفظة" : "عبر المُجمِّع"}` : ""}
                 </span>
                 <span className="text-gray-400 text-xs mr-auto" dir="ltr">
-                  {new Date(inv.createdAt).toLocaleDateString("ar-YE")}
+                  {new Date(inv.createdAt).toLocaleDateString("ar-u-nu-latn")}
                 </span>
               </div>
             ))}
@@ -286,11 +287,11 @@ export function Subscription({
             {data.ledger.map((t: any) => (
               <div key={t.id} className="flex items-center gap-3 text-sm border-b last:border-0 pb-2 last:pb-0">
                 <span className={`font-bold ${Number(t.amount) >= 0 ? "text-green-600" : "text-red-500"}`} dir="ltr">
-                  {Number(t.amount) >= 0 ? "+" : ""}{Number(t.amount).toLocaleString("ar-YE")}
+                  {Number(t.amount) >= 0 ? "+" : ""}{Number(t.amount).toLocaleString("ar-u-nu-latn")}
                 </span>
                 <span>{TXN_LABEL[t.type] ?? t.type}</span>
                 <span className="text-gray-500 text-xs truncate flex-1">{t.note}</span>
-                <span className="text-gray-400 text-xs shrink-0">الرصيد: {Number(t.balanceAfter).toLocaleString("ar-YE")}</span>
+                <span className="text-gray-400 text-xs shrink-0">الرصيد: {Number(t.balanceAfter).toLocaleString("ar-u-nu-latn")}</span>
               </div>
             ))}
           </div>

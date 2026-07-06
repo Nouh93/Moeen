@@ -6,6 +6,15 @@ import {
   ORDER_STATUS_TRANSITIONS,
   OrderStatus,
 } from "@moeen/shared";
+import {
+  Banknote,
+  MapPin,
+  MessageCircle,
+  Printer,
+  StickyNote,
+  Ticket,
+  User,
+} from "lucide-react";
 import { api, formatPrice } from "@/lib/api";
 
 const STATUS_BADGE: Record<string, string> = {
@@ -18,11 +27,11 @@ const STATUS_BADGE: Record<string, string> = {
 };
 
 const ACTION_LABEL: Record<string, string> = {
-  PROCESSING: "ابدأ التجهيز 📦",
-  OUT_FOR_DELIVERY: "سلّمته للمندوب 🛵",
-  DELIVERED: "تم التسليم ✅",
+  PROCESSING: "ابدأ التجهيز",
+  OUT_FOR_DELIVERY: "سلّمته للمندوب",
+  DELIVERED: "تم التسليم ✓",
   CANCELLED: "إلغاء",
-  RETURNED: "مرتجع ↩️",
+  RETURNED: "مرتجع",
 };
 
 const FILTERS: { id: string; label: string }[] = [
@@ -85,7 +94,7 @@ export function Orders({ token, store }: { token: string; store: any }) {
         ))}
         <input
           className="border rounded-lg px-3 py-1.5 text-sm flex-1 min-w-40"
-          placeholder="🔍 بحث برمز الطلب أو اسم/جوال العميل"
+          placeholder="بحث برمز الطلب أو اسم/جوال العميل"
           value={q}
           onChange={(e) => {
             setQ(e.target.value);
@@ -115,32 +124,32 @@ export function Orders({ token, store }: { token: string; store: any }) {
                         {ORDER_STATUS_AR[o.status as OrderStatus]}
                       </span>
                       <span className="text-xs text-gray-400" dir="ltr">
-                        {new Date(o.createdAt).toLocaleString("ar-YE", { dateStyle: "short", timeStyle: "short" })}
+                        {new Date(o.createdAt).toLocaleString("ar-u-nu-latn", { dateStyle: "short", timeStyle: "short" })}
                       </span>
                     </div>
-                    <div className="text-brand-700 font-bold">{formatPrice(o.total, o.currency)} 💵</div>
+                    <div className="text-brand-700 font-bold flex items-center gap-1.5"><Banknote size={16} className="text-green-600" /> {formatPrice(o.total, o.currency)}</div>
                   </div>
                   <div className="mt-2 text-sm text-gray-700">
-                    <div>
-                      👤 {o.customerName} —{" "}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <User size={14} className="text-gray-400" /> {o.customerName} —{" "}
                       <a
                         href={`https://wa.me/${o.customerPhone.replace(/\D/g, "")}`}
                         target="_blank"
-                        className="text-green-600 font-semibold"
+                        className="text-green-600 font-semibold inline-flex items-center gap-1"
                         dir="ltr"
                       >
-                        {o.customerPhone} 💬
+                        <MessageCircle size={13} /> {o.customerPhone}
                       </a>
                     </div>
-                    <div className="mt-1">
-                      📍 {o.governorate?.nameAr}
+                    <div className="mt-1 flex items-start gap-1.5">
+                      <MapPin size={14} className="text-gray-400 mt-0.5 shrink-0" /> {o.governorate?.nameAr}
                       {o.district ? ` — ${o.district.nameAr}` : o.districtText ? ` — ${o.districtText}` : ""} — {o.neighborhood}
                     </div>
                     <div className="text-gray-500">{o.addressDetails}</div>
-                    {o.courierNote && <div className="text-amber-700 mt-1">📝 للمندوب: {o.courierNote}</div>}
+                    {o.courierNote && <div className="text-amber-700 mt-1 flex items-center gap-1.5"><StickyNote size={14} /> للمندوب: {o.courierNote}</div>}
                     {o.couponCode && (
-                      <div className="text-purple-700 mt-1">
-                        🎟️ كوبون {o.couponCode} — خصم {formatPrice(o.discount, o.currency)}
+                      <div className="text-purple-700 mt-1 flex items-center gap-1.5">
+                        <Ticket size={14} /> كوبون {o.couponCode} — خصم {formatPrice(o.discount, o.currency)}
                       </div>
                     )}
                   </div>
@@ -168,9 +177,9 @@ export function Orders({ token, store }: { token: string; store: any }) {
                     <a
                       href={`/dashboard/waybill/${o.id}`}
                       target="_blank"
-                      className="rounded-lg px-4 py-2 text-sm font-bold border hover:bg-gray-50"
+                      className="rounded-lg px-4 py-2 text-sm font-bold border hover:bg-gray-50 inline-flex items-center gap-1.5"
                     >
-                      بوليصة الشحن 🖨️
+                      <Printer size={15} /> بوليصة الشحن
                     </a>
                   </div>
                 </div>

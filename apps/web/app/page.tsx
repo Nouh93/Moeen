@@ -1,14 +1,26 @@
 import Link from "next/link";
+import {
+  Banknote,
+  Check,
+  HandCoins,
+  MapPin,
+  MessageCircle,
+  ShoppingCart,
+  Store,
+  TicketPercent,
+  Truck,
+  WifiOff,
+} from "lucide-react";
 import { PLANS, PlanId } from "@moeen/shared";
 import { BrandLogo, QamariyaMark } from "./components/brand";
 
 const FEATURES = [
-  ["💵", "الدفع عند الاستلام", "عميلك يدفع كاش للمندوب عند الباب — بدون بطاقات وبدون مخاطرة. والمحافظ اليمنية قادمة."],
-  ["📍", "عناوين تفهم اليمن", "المحافظة والمديرية والوصف الحر: «بجانب مسجد الفاروق» — المندوب يوصل بدون رقم مبنى."],
-  ["💬", "واتساب في كل خطوة", "تأكيد الطلب، خروج المندوب، التسليم — كلها تصل عميلك تلقائياً، وأنت يصلك كل طلب فوراً."],
-  ["📴", "يعمل بأسوأ إنترنت", "المتجر يفتح على 2G، والطلب الذي يعلق عند انقطاع النت يُرسَل تلقائياً عند عودته."],
-  ["🚚", "شحن على طريقتك", "مندوبك الخاص أو شركات التوصيل، سعر لكل محافظة، وتوصيل مجاني فوق مبلغ تحدده."],
-  ["🎟️", "كوبونات للمسوّقات", "كود لكل مسوّقة على إنستجرام وواتساب — وتتبّع مبيعات كل كود من لوحتك."],
+  [HandCoins, "الدفع عند الاستلام", "عميلك يدفع كاش للمندوب عند الباب — بدون بطاقات وبدون مخاطرة. والمحافظ اليمنية قادمة."],
+  [MapPin, "عناوين تفهم اليمن", "المحافظة والمديرية والوصف الحر: «بجانب مسجد الفاروق» — المندوب يوصل بدون رقم مبنى."],
+  [MessageCircle, "واتساب في كل خطوة", "تأكيد الطلب، خروج المندوب، التسليم — كلها تصل عميلك تلقائياً، وأنت يصلك كل طلب فوراً."],
+  [WifiOff, "يعمل بأسوأ إنترنت", "المتجر يفتح على 2G، والطلب الذي يعلق عند انقطاع النت يُرسَل تلقائياً عند عودته."],
+  [Truck, "شحن على طريقتك", "مندوبك الخاص أو شركات التوصيل، سعر لكل محافظة، وتوصيل مجاني فوق مبلغ تحدده."],
+  [TicketPercent, "كوبونات للمسوّقات", "كود لكل مسوّقة على إنستجرام وواتساب — وتتبّع مبيعات كل كود من لوحتك."],
 ] as const;
 
 const STEPS = [
@@ -20,10 +32,10 @@ const STEPS = [
 /** معاينة متجر مصغّرة داخل إطار جوال — مرسومة لا صورة */
 function PhoneMockup() {
   const tiles = [
-    ["🧴", "دهن عود ملكي", "١٨٬٠٠٠"],
-    ["🪵", "عود كمبودي", "٢٥٬٠٠٠"],
-    ["🕯️", "بخور دوسري", "٨٬٠٠٠"],
-    ["🌸", "عطر الياسمين", "١٢٬٠٠٠"],
+    ["دهن عود ملكي", "18,000"],
+    ["عود كمبودي", "25,000"],
+    ["بخور دوسري", "8,000"],
+    ["عطر الياسمين", "12,000"],
   ];
   return (
     <div className="relative mx-auto w-64 select-none" aria-hidden>
@@ -31,27 +43,31 @@ function PhoneMockup() {
       <div className="relative rounded-[2.4rem] border-[7px] border-brand-950/90 bg-[#f7f5f0] shadow-2xl shadow-brand-950/40 overflow-hidden">
         <div className="brand-header text-white px-4 pt-5 pb-3">
           <div className="flex items-center gap-2">
-            <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center text-sm">🏪</span>
+            <span className="w-7 h-7 rounded-lg bg-white/15 flex items-center justify-center">
+              <Store size={14} />
+            </span>
             <div>
               <div className="text-xs font-bold">متجر العافية</div>
               <div className="text-[9px] text-brand-200">صنعاء — توصيل لكل المحافظات</div>
             </div>
-            <span className="mr-auto text-[9px] bg-amber-400 text-brand-950 font-bold rounded-full px-2 py-0.5">
-              🛒 ٣
+            <span className="mr-auto text-[9px] bg-amber-400 text-brand-950 font-bold rounded-full px-2 py-0.5 flex items-center gap-1">
+              <ShoppingCart size={10} /> 3
             </span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2 p-3">
-          {tiles.map(([emoji, name, price]) => (
+          {tiles.map(([name, price]) => (
             <div key={name} className="bg-white rounded-xl border border-brand-900/10 p-2 shadow-sm">
-              <div className="arch bg-brand-50 h-14 flex items-center justify-center text-2xl">{emoji}</div>
+              <div className="arch bg-brand-100/70 h-14 flex items-center justify-center text-brand-300">
+                <Store size={22} strokeWidth={1.5} />
+              </div>
               <div className="text-[9px] font-bold mt-1.5">{name}</div>
-              <div className="text-[9px] text-brand-600 font-bold">{price} ريال</div>
+              <div className="text-[9px] text-brand-600 font-bold" dir="ltr">{price} ريال</div>
             </div>
           ))}
         </div>
-        <div className="mx-3 mb-3 rounded-xl bg-brand-900 text-white text-center text-[10px] font-bold py-2">
-          تأكيد الطلب — الدفع عند الاستلام 💵
+        <div className="mx-3 mb-3 rounded-xl bg-brand-900 text-white text-center text-[10px] font-bold py-2 flex items-center justify-center gap-1.5">
+          <Banknote size={12} /> تأكيد الطلب — الدفع عند الاستلام
         </div>
       </div>
     </div>
@@ -111,9 +127,9 @@ export default function Home() {
               </Link>
             </div>
             <div className="mt-9 flex flex-wrap justify-center md:justify-start gap-x-7 gap-y-2 text-sm text-brand-200">
-              <span>✓ بدون بطاقة ائتمانية</span>
-              <span>✓ بدون عمولة على مبيعاتك</span>
-              <span>✓ باقة مجانية دائمة</span>
+              <span className="flex items-center gap-1.5"><Check size={15} className="text-amber-300" /> بدون بطاقة ائتمانية</span>
+              <span className="flex items-center gap-1.5"><Check size={15} className="text-amber-300" /> بدون عمولة على مبيعاتك</span>
+              <span className="flex items-center gap-1.5"><Check size={15} className="text-amber-300" /> باقة مجانية دائمة</span>
             </div>
           </div>
           <div className="hidden md:block">
@@ -133,10 +149,10 @@ export default function Home() {
           والواتساب هو كل شيء.
         </p>
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {FEATURES.map(([icon, title, desc]) => (
+          {FEATURES.map(([Icon, title, desc]) => (
             <div key={title} className="card p-6 hover:shadow-lg transition-shadow">
-              <div className="w-12 h-12 arch bg-brand-900 text-amber-300 flex items-center justify-center text-2xl">
-                {icon}
+              <div className="w-12 h-12 arch bg-brand-900 text-amber-300 flex items-center justify-center">
+                <Icon size={22} strokeWidth={1.8} />
               </div>
               <div className="font-heading font-bold text-lg mt-4 text-brand-950">{title}</div>
               <div className="text-sm text-gray-600 mt-1.5 leading-relaxed">{desc}</div>
@@ -190,14 +206,14 @@ export default function Home() {
                 <div className="font-heading font-bold text-xl text-brand-950">{plan.nameAr}</div>
                 <div className="mt-3">
                   <span className="font-heading text-4xl font-extrabold text-brand-800">
-                    {plan.monthlyPrice === 0 ? "مجاناً" : plan.monthlyPrice.toLocaleString("ar-YE")}
+                    {plan.monthlyPrice === 0 ? "مجاناً" : plan.monthlyPrice.toLocaleString("ar-u-nu-latn")}
                   </span>
                   {plan.monthlyPrice > 0 && <span className="text-gray-500 text-sm"> ريال / شهر</span>}
                 </div>
                 <ul className="mt-5 space-y-2.5 text-sm text-gray-700 flex-1">
                   {plan.features.map((f) => (
                     <li key={f} className="flex gap-2">
-                      <span className="text-amber-600 font-bold">✓</span> {f}
+                      <Check size={16} className="text-amber-600 shrink-0 mt-0.5" /> {f}
                     </li>
                   ))}
                 </ul>

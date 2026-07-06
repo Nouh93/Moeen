@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
+import { Banknote, ImageIcon, PartyPopper, ShoppingCart, Ticket, WifiOff } from "lucide-react";
 import { api, formatPrice, imgUrl } from "@/lib/api";
 import { CartItem, clearCart, getCart, saveCart } from "@/lib/cart";
 
@@ -179,7 +180,9 @@ export default function CartPage({
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
         <div className="card rounded-2xl p-8 max-w-md w-full text-center">
-          <div className="text-6xl">🎉</div>
+          <div className="mx-auto w-20 h-20 arch bg-amber-400/20 text-amber-600 flex items-center justify-center">
+            <PartyPopper size={40} strokeWidth={1.6} />
+          </div>
           <h1 className="text-2xl font-bold mt-4">وصل طلبك بنجاح!</h1>
           <p className="text-gray-600 mt-2">
             سيتواصل معك المتجر لتأكيد الطلب. رمز التتبع:
@@ -214,7 +217,7 @@ export default function CartPage({
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-4">🛒 سلتك وإتمام الطلب</h1>
+        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2"><ShoppingCart size={24} className="text-brand-600" /> سلتك وإتمام الطلب</h1>
 
         {items.length === 0 ? (
           <p className="text-center text-gray-500 py-16">
@@ -233,7 +236,7 @@ export default function CartPage({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={imgUrl(i.imageUrl)} alt="" className="w-full h-full object-cover rounded-lg" />
                     ) : (
-                      "🛍️"
+                      <ImageIcon size={22} className="text-gray-300" strokeWidth={1.5} />
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -322,13 +325,16 @@ export default function CartPage({
             {/* الكوبون */}
             <div className="card mt-4 p-4">
               <div className="flex gap-2">
-                <input
-                  className="border rounded-lg px-3 py-2 flex-1 font-mono"
-                  placeholder="🎟️ عندك كوبون خصم؟"
+                <div className="relative flex-1">
+                  <Ticket size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                  className="border rounded-lg px-3 py-2 w-full font-mono"
+                  placeholder="عندك كوبون خصم؟"
                   dir="ltr"
                   value={couponInput}
                   onChange={(e) => setCouponInput(e.target.value.toUpperCase())}
-                />
+                  />
+                </div>
                 <button onClick={applyCoupon} className="bg-gray-900 text-white rounded-lg px-4 font-bold text-sm">
                   تطبيق
                 </button>
@@ -363,14 +369,16 @@ export default function CartPage({
                 </span>
                 <span className="font-semibold">
                   {freeShipping ? (
-                    <span className="text-green-700">مجاني 🎉</span>
+                    <span className="text-green-700">مجاني ✓</span>
                   ) : (
                     store && formatPrice(shipping, store.currency)
                   )}
                 </span>
               </div>
               <div className="flex justify-between text-lg font-bold mt-2 pt-2 border-t">
-                <span>الإجمالي — تدفعه عند الاستلام 💵</span>
+                <span className="flex items-center gap-1.5">
+                  الإجمالي — تدفعه عند الاستلام <Banknote size={18} className="text-green-600" />
+                </span>
                 <span className="text-brand-700">
                   {store && formatPrice(subtotal - discount + shipping, store.currency)}
                 </span>
@@ -382,7 +390,7 @@ export default function CartPage({
             )}
             {state.phase === "queued" && (
               <div className="mt-3 bg-amber-50 text-amber-800 rounded-lg p-3 text-sm">
-                ⚠️ لا يوجد اتصال حالياً — حفظنا طلبك وسيُرسَل تلقائياً فور عودة الإنترنت. اترك هذه الصفحة مفتوحة.
+                <span className="flex items-start gap-2"><WifiOff size={17} className="shrink-0 mt-0.5" /> لا يوجد اتصال حالياً — حفظنا طلبك وسيُرسَل تلقائياً فور عودة الإنترنت. اترك هذه الصفحة مفتوحة.</span>
               </div>
             )}
 

@@ -5,6 +5,16 @@ import { useCallback, useEffect, useState } from "react";
 import { CURRENCY_AR } from "@moeen/shared";
 import { api } from "@/lib/api";
 import { BrandLogo } from "../components/brand";
+import {
+  CreditCard,
+  ExternalLink,
+  LayoutDashboard,
+  Package,
+  Settings as SettingsIcon,
+  ShoppingBag,
+  TicketPercent,
+  TriangleAlert,
+} from "lucide-react";
 import { Overview } from "./components/overview";
 import { Orders } from "./components/orders";
 import { Products } from "./components/products";
@@ -150,12 +160,12 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 // ---------- اللوحة ----------
 
 const TABS = [
-  ["overview", "📊 نظرة عامة"],
-  ["orders", "📦 الطلبات"],
-  ["products", "🛍️ المنتجات"],
-  ["coupons", "🎟️ الكوبونات"],
-  ["subscription", "💳 الاشتراك"],
-  ["settings", "⚙️ الإعدادات"],
+  ["overview", "نظرة عامة", LayoutDashboard],
+  ["orders", "الطلبات", Package],
+  ["products", "المنتجات", ShoppingBag],
+  ["coupons", "الكوبونات", TicketPercent],
+  ["subscription", "الاشتراك", CreditCard],
+  ["settings", "الإعدادات", SettingsIcon],
 ] as const;
 
 type TabId = (typeof TABS)[number][0];
@@ -188,8 +198,8 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <div className="font-bold text-lg">{store.name}</div>
-            <a href={`/s/${store.slug}`} target="_blank" className="text-brand-100 text-xs underline">
-              /s/{store.slug} — افتح متجرك ↗
+            <a href={`/s/${store.slug}`} target="_blank" className="text-brand-200 text-xs underline inline-flex items-center gap-1">
+              <ExternalLink size={12} /> /s/{store.slug} — افتح متجرك
             </a>
           </div>
           <button onClick={onLogout} className="text-sm bg-white/15 rounded-lg px-3 py-1.5 hover:bg-white/25">
@@ -197,14 +207,15 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
           </button>
         </div>
         <nav className="max-w-5xl mx-auto px-4 flex gap-1 overflow-x-auto">
-          {TABS.map(([id, label]) => (
+          {TABS.map(([id, label, Icon]) => (
             <button
               key={id}
               onClick={() => setTab(id)}
-              className={`px-4 py-2.5 rounded-t-lg text-sm font-semibold whitespace-nowrap ${
-                tab === id ? "bg-gray-50 text-brand-700" : "text-brand-100 hover:bg-white/10"
+              className={`px-4 py-2.5 rounded-t-xl text-sm font-semibold whitespace-nowrap flex items-center gap-1.5 ${
+                tab === id ? "bg-[#f7f5f0] text-brand-800" : "text-brand-200 hover:bg-white/10"
               }`}
             >
+              <Icon size={16} strokeWidth={2} />
               {label}
             </button>
           ))}
@@ -215,8 +226,9 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
       {store.status === "SUSPENDED" && (
         <div className="bg-red-600 text-white">
           <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
-            <div className="font-bold text-sm">
-              ⚠️ متجرك موقوف مؤقتاً عن الزوار لتأخر السداد — بياناتك بأمان تام، وسداد الاشتراك يعيده فوراً
+            <div className="font-bold text-sm flex items-center gap-2">
+              <TriangleAlert size={18} className="shrink-0" />
+              متجرك موقوف مؤقتاً عن الزوار لتأخر السداد — بياناتك بأمان تام، وسداد الاشتراك يعيده فوراً
             </div>
             <button
               onClick={() => setTab("subscription")}
@@ -289,7 +301,7 @@ function CreateStore({ token, onCreated }: { token: string; onCreated: () => voi
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-8">
       <div className="card rounded-2xl p-8 max-w-md w-full">
-        <h1 className="text-2xl font-bold text-center">أنشئ متجرك 🎉</h1>
+        <h1 className="text-2xl font-bold text-center">أنشئ متجرك</h1>
         <p className="text-gray-500 text-sm text-center mt-1">ثلاث خطوات ومتجرك يستقبل الطلبات</p>
         <div className="mt-6 space-y-3">
           <input

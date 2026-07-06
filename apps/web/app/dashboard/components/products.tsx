@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Camera, ImageIcon, Pencil, Plus } from "lucide-react";
 import { api, formatPrice, imgUrl, uploadFile } from "@/lib/api";
 
 const EMPTY_FORM = {
@@ -159,8 +160,8 @@ export function Products({ token, store }: { token: string; store: any }) {
         </div>
       </div>
 
-      <button onClick={openNew} className="bg-brand-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-brand-700">
-        + أضف منتجاً
+      <button onClick={openNew} className="bg-brand-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-brand-700 inline-flex items-center gap-1.5">
+        <Plus size={18} /> أضف منتجاً
       </button>
 
       {/* نموذج إضافة/تعديل */}
@@ -221,7 +222,7 @@ export function Products({ token, store }: { token: string; store: any }) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={imgUrl(form.imageUrl)} alt="" className="w-full h-full object-cover" />
               ) : (
-                "🛍️"
+                <ImageIcon size={20} className="text-gray-300" strokeWidth={1.5} />
               )}
             </div>
             <div>
@@ -237,7 +238,7 @@ export function Products({ token, store }: { token: string; store: any }) {
                 disabled={uploading}
                 className="border rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50"
               >
-                {uploading ? "جارٍ الرفع..." : form.imageUrl ? "غيّر الصورة 📷" : "ارفع صورة 📷"}
+                {uploading ? "جارٍ الرفع..." : (<span className="inline-flex items-center gap-1.5"><Camera size={15} /> {form.imageUrl ? "غيّر الصورة" : "ارفع صورة"}</span>)}
               </button>
               {form.imageUrl && (
                 <button onClick={() => setForm({ ...form, imageUrl: "" })} className="text-red-500 text-sm mr-3">
@@ -286,7 +287,7 @@ export function Products({ token, store }: { token: string; store: any }) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={imgUrl(p.imageUrl)} alt="" className="w-full h-full object-cover" />
               ) : (
-                "🛍️"
+                <ImageIcon size={20} className="text-gray-300" strokeWidth={1.5} />
               )}
             </div>
             <div className="flex-1 min-w-0">
@@ -303,8 +304,8 @@ export function Products({ token, store }: { token: string; store: any }) {
                 )}
               </div>
             </div>
-            <button onClick={() => openEdit(p)} className="text-xs rounded-lg px-3 py-1.5 font-semibold border hover:bg-gray-50">
-              تعديل ✏️
+            <button onClick={() => openEdit(p)} className="text-xs rounded-lg px-3 py-1.5 font-semibold border hover:bg-gray-50 inline-flex items-center gap-1">
+              <Pencil size={12} /> تعديل
             </button>
             <button
               onClick={() => toggle(p)}
@@ -317,7 +318,7 @@ export function Products({ token, store }: { token: string; store: any }) {
           </div>
         ))}
         {products.length === 0 && editing === null && (
-          <div className="text-center text-gray-500 py-10">أضف أول منتج ليظهر متجرك للعملاء 🛍️</div>
+          <div className="text-center text-gray-500 py-10">أضف أول منتج ليظهر متجرك للعملاء</div>
         )}
       </div>
     </div>

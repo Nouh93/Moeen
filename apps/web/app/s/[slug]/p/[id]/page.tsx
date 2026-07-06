@@ -1,6 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Banknote, ImageIcon, MessageCircle, Zap } from "lucide-react";
 import { api, formatPrice, imgUrl } from "@/lib/api";
 import { AddToCartButton, CartLink } from "../../cart-widgets";
 
@@ -65,7 +66,7 @@ export default async function ProductPage({
               className="w-full h-full object-cover"
             />
           ) : (
-            "🛍️"
+            <ImageIcon size={64} className="text-gray-200" strokeWidth={1} />
           )}
         </div>
         <div>
@@ -81,8 +82,8 @@ export default async function ProductPage({
             )}
           </div>
           {product.trackStock && product.stock > 0 && product.stock <= 5 && (
-            <div className="mt-2 text-amber-600 font-semibold text-sm">
-              ⚡ تبقى {product.stock} قطع فقط
+            <div className="mt-2 text-amber-600 font-semibold text-sm flex items-center gap-1">
+              <Zap size={15} /> تبقى {product.stock} قطع فقط
             </div>
           )}
           {product.description && (
@@ -100,14 +101,14 @@ export default async function ProductPage({
               <a
                 href={`https://wa.me/${store.whatsapp.replace(/\D/g, "")}?text=${encodeURIComponent(`استفسار عن: ${product.name}`)}`}
                 target="_blank"
-                className="bg-green-500 text-white rounded-xl px-5 py-3 font-bold hover:bg-green-600"
+                className="bg-green-500 text-white rounded-xl px-5 py-3 font-bold hover:bg-green-600 inline-flex items-center gap-2"
               >
-                واتساب 💬
+                <MessageCircle size={20} /> واتساب
               </a>
             )}
           </div>
-          <p className="mt-4 text-sm text-gray-500">
-            💵 الدفع عند الاستلام — رسوم التوصيل{" "}
+          <p className="mt-4 text-sm text-gray-500 flex items-center gap-1.5">
+            <Banknote size={16} className="text-green-600" /> الدفع عند الاستلام — رسوم التوصيل{" "}
             {formatPrice(store.shippingFee, store.currency)}
           </p>
         </div>

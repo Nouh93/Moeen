@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Plus, Ticket } from "lucide-react";
 import { api, formatPrice } from "@/lib/api";
 
 /** الكوبونات (القسم 9.1) — أداة "المندوبات" والمسوّقين */
@@ -69,7 +70,7 @@ export function Coupons({ token, store }: { token: string; store: any }) {
         onClick={() => setShowForm(!showForm)}
         className="bg-brand-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-brand-700"
       >
-        {showForm ? "إغلاق" : "+ كوبون جديد"}
+        {showForm ? "إغلاق" : (<span className="inline-flex items-center gap-1.5"><Plus size={18} /> كوبون جديد</span>)}
       </button>
 
       {showForm && (
@@ -133,7 +134,7 @@ export function Coupons({ token, store }: { token: string; store: any }) {
       <div className="mt-4 space-y-2">
         {coupons.map((c) => (
           <div key={c.id} className="card p-3 flex items-center gap-3 flex-wrap">
-            <span className="font-mono font-bold text-lg bg-purple-50 text-purple-700 rounded-lg px-3 py-1">🎟️ {c.code}</span>
+            <span className="font-mono font-bold text-lg bg-purple-50 text-purple-700 rounded-lg px-3 py-1 inline-flex items-center gap-1.5"><Ticket size={16} /> {c.code}</span>
             <span className="text-sm">
               {c.type === "PERCENT" ? `خصم ${Number(c.value)}%` : `خصم ${formatPrice(c.value, store.currency)}`}
               {c.minOrder && ` · حد أدنى ${formatPrice(c.minOrder, store.currency)}`}
@@ -144,7 +145,7 @@ export function Coupons({ token, store }: { token: string; store: any }) {
             </span>
             {c.expiresAt && (
               <span className="text-xs text-gray-400" dir="ltr">
-                حتى {new Date(c.expiresAt).toLocaleDateString("ar-YE")}
+                حتى {new Date(c.expiresAt).toLocaleDateString("ar-u-nu-latn")}
               </span>
             )}
             <button
@@ -159,7 +160,7 @@ export function Coupons({ token, store }: { token: string; store: any }) {
         ))}
         {coupons.length === 0 && !showForm && (
           <div className="text-center text-gray-500 py-10">
-            أنشئ كوبوناً وشاركه مع المسوّقات في واتساب وإنستجرام — وتتبّع مبيعات كل كود 🎯
+            أنشئ كوبوناً وشاركه مع المسوّقات في واتساب وإنستجرام — وتتبّع مبيعات كل كود
           </div>
         )}
       </div>

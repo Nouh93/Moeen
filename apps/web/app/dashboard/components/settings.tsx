@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { CURRENCY_AR } from "@moeen/shared";
+import { Camera, Store as StoreIcon } from "lucide-react";
 import { api, imgUrl, uploadFile } from "@/lib/api";
 
 export function Settings({
@@ -104,7 +105,7 @@ export function Settings({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={imgUrl(form.logoUrl)} alt="" className="w-full h-full object-cover" />
             ) : (
-              "🏪"
+              <StoreIcon size={24} className="text-gray-300" strokeWidth={1.5} />
             )}
           </div>
           <input
@@ -119,7 +120,7 @@ export function Settings({
             disabled={uploading}
             className="border rounded-lg px-4 py-2 text-sm font-semibold hover:bg-gray-50 disabled:opacity-50"
           >
-            {uploading ? "جارٍ الرفع..." : "شعار المتجر 📷"}
+            {uploading ? "جارٍ الرفع..." : (<span className="inline-flex items-center gap-1.5"><Camera size={15} /> شعار المتجر</span>)}
           </button>
         </div>
 
@@ -185,7 +186,7 @@ export function Settings({
           {rates?.map((r) => (
             <div key={r.id} className="flex items-center gap-2 text-sm bg-gray-50 rounded-lg px-3 py-2">
               <span className="font-semibold">{r.governorate.nameAr}</span>
-              <span className="text-brand-700 font-bold">{Number(r.fee).toLocaleString("ar-YE")}</span>
+              <span className="text-brand-700 font-bold">{Number(r.fee).toLocaleString("ar-u-nu-latn")}</span>
               {r.etaText && <span className="text-gray-500 text-xs">({r.etaText})</span>}
               <button onClick={() => removeRate(r.id)} className="mr-auto text-gray-400 hover:text-red-500 font-bold">
                 ×

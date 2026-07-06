@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { MessageCircle, Truck } from "lucide-react";
 import { api, imgUrl } from "@/lib/api";
 import { CartLink } from "./cart-widgets";
 import { ProductsBrowser } from "./products-browser";
@@ -61,8 +62,12 @@ export default async function StorePage({
               <p className="text-brand-100 text-xs mt-1">
                 {store.governorate?.nameAr}
                 {store.city ? ` — ${store.city}` : ""}
-                {store.freeShippingAbove &&
-                  ` · 🚚 توصيل مجاني فوق ${Number(store.freeShippingAbove).toLocaleString("ar-YE")}`}
+                {store.freeShippingAbove && (
+                  <span className="inline-flex items-center gap-1 mr-1">
+                    · <Truck size={12} /> توصيل مجاني فوق{" "}
+                    {Number(store.freeShippingAbove).toLocaleString("ar-u-nu-latn")}
+                  </span>
+                )}
               </p>
             </div>
           </div>
@@ -82,10 +87,10 @@ export default async function StorePage({
           <a
             href={`https://wa.me/${store.whatsapp.replace(/\D/g, "")}`}
             target="_blank"
-            className="fixed bottom-5 left-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center text-2xl shadow-lg hover:bg-green-600"
+            className="fixed bottom-5 left-5 bg-green-500 text-white rounded-full w-14 h-14 flex items-center justify-center shadow-lg hover:bg-green-600"
             title="تواصل مع التاجر عبر واتساب"
           >
-            💬
+            <MessageCircle size={26} />
           </a>
         )}
       </div>

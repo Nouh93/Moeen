@@ -1,12 +1,20 @@
 import type { Metadata, Viewport } from "next";
-import { Tajawal } from "next/font/google";
+import { Alexandria, IBM_Plex_Sans_Arabic } from "next/font/google";
 import "./globals.css";
 import { SwRegister } from "./sw-register";
 
-const tajawal = Tajawal({
+// Alexandria: هندسي حديث للعناوين — IBM Plex Sans Arabic: مقروء ومحترف للنصوص
+const alexandria = Alexandria({
   subsets: ["arabic"],
-  weight: ["400", "500", "700", "800"],
-  variable: "--font-tajawal",
+  weight: ["500", "600", "700", "800"],
+  variable: "--font-heading",
+  display: "swap",
+});
+
+const plexArabic = IBM_Plex_Sans_Arabic({
+  subsets: ["arabic"],
+  weight: ["400", "500", "700"],
+  variable: "--font-body",
   display: "swap",
 });
 
@@ -19,7 +27,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#115e59",
+  themeColor: "#14172b",
 };
 
 export default function RootLayout({
@@ -28,7 +36,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="ar" dir="rtl" className={tajawal.variable}>
+    <html lang="ar" dir="rtl" className={`${alexandria.variable} ${plexArabic.variable}`}>
       <body>
         <SwRegister />
         {children}

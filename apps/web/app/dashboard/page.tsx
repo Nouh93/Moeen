@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { CURRENCY_AR } from "@moeen/shared";
 import { api } from "@/lib/api";
+import { BrandLogo } from "../components/brand";
 import { Overview } from "./components/overview";
 import { Orders } from "./components/orders";
 import { Products } from "./components/products";
@@ -89,8 +90,8 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
       <div className="card rounded-2xl p-8 max-w-sm w-full">
-        <Link href="/" className="block text-center text-2xl font-bold text-brand-700">
-          مُعين 🇾🇪
+        <Link href="/" className="flex justify-center">
+          <BrandLogo size={44} />
         </Link>
         <h1 className="text-center text-lg font-semibold mt-2 text-gray-600">دخول التاجر</h1>
         {step === "phone" ? (

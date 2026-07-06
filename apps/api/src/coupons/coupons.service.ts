@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { PLANS, PlanId } from "@moeen/shared";
 import { PrismaService } from "../prisma/prisma.service";
 import { StoresService } from "../stores/stores.service";
 
@@ -35,7 +36,13 @@ export class CouponsService {
       expiresAt?: string;
     },
   ) {
-    await this.stores.ownedByOrThrow(storeId, ownerId);
+    const store = await this.stores.ownedByOrThrow(storeId, ownerId);
+    // الكوبونات من مزايا الباقات المدفوعة (القسم 3.2)
+    if (!PLANS[store.plan as PlanId].coupons) {
+      throw new BadRequestException(
+        `الكوبونات والعروض من مزايا باقة "نمو" — رقِّ باقتك من تبويب الاشتراك وفعّلها فوراً`,
+      );
+    }
     if (data.type === "PERCENT" && (data.value <= 0 || data.value > 100)) {
       throw new BadRequestException("نسبة الخصم يجب أن تكون بين 1 و 100");
     }

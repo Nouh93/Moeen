@@ -134,7 +134,7 @@ export function Products({ token, store }: { token: string; store: any }) {
   return (
     <div>
       {/* التصنيفات */}
-      <div className="bg-white rounded-xl border p-4 mb-4">
+      <div className="card p-4 mb-4">
         <h3 className="font-bold text-sm mb-2">التصنيفات</h3>
         <div className="flex flex-wrap gap-2 items-center">
           {categories.map((c) => (
@@ -165,7 +165,7 @@ export function Products({ token, store }: { token: string; store: any }) {
 
       {/* نموذج إضافة/تعديل */}
       {editing !== null && (
-        <div className="bg-white rounded-xl border-2 border-brand-500 p-4 mt-4 space-y-3">
+        <div className="card border-2 border-brand-500 p-4 mt-4 space-y-3">
           <div className="flex justify-between items-center">
             <h3 className="font-bold">{editing.id ? "تعديل المنتج" : "منتج جديد"}</h3>
             <button onClick={() => setEditing(null)} className="text-gray-400 font-bold text-xl">
@@ -280,7 +280,7 @@ export function Products({ token, store }: { token: string; store: any }) {
 
       <div className="mt-4 space-y-2">
         {products.map((p) => (
-          <div key={p.id} className="bg-white rounded-xl border p-3 flex items-center gap-3">
+          <div key={p.id} className="card p-3 flex items-center gap-3">
             <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center text-xl shrink-0 overflow-hidden">
               {p.imageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element

@@ -178,7 +178,7 @@ export default function CartPage({
   if (state.phase === "done") {
     return (
       <main className="min-h-screen flex items-center justify-center px-4">
-        <div className="bg-white rounded-2xl border p-8 max-w-md w-full text-center">
+        <div className="card rounded-2xl p-8 max-w-md w-full text-center">
           <div className="text-6xl">🎉</div>
           <h1 className="text-2xl font-bold mt-4">وصل طلبك بنجاح!</h1>
           <p className="text-gray-600 mt-2">
@@ -205,7 +205,7 @@ export default function CartPage({
 
   return (
     <main className="min-h-screen">
-      <header className="bg-brand-700 text-white">
+      <header className="brand-header text-white">
         <div className="max-w-3xl mx-auto px-4 py-4">
           <Link href={`/s/${slug}`} className="font-bold text-lg">
             → {store?.name ?? "المتجر"}
@@ -225,7 +225,7 @@ export default function CartPage({
           </p>
         ) : (
           <>
-            <div className="bg-white rounded-xl border divide-y">
+            <div className="card divide-y">
               {items.map((i) => (
                 <div key={i.productId} className="flex items-center gap-3 p-3">
                   <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-2xl shrink-0">
@@ -251,7 +251,7 @@ export default function CartPage({
               ))}
             </div>
 
-            <div className="bg-white rounded-xl border mt-4 p-4 space-y-3">
+            <div className="card mt-4 p-4 space-y-3">
               <h2 className="font-bold text-lg">بيانات التوصيل</h2>
               <div className="grid sm:grid-cols-2 gap-3">
                 <input
@@ -320,7 +320,7 @@ export default function CartPage({
             </div>
 
             {/* الكوبون */}
-            <div className="bg-white rounded-xl border mt-4 p-4">
+            <div className="card mt-4 p-4">
               <div className="flex gap-2">
                 <input
                   className="border rounded-lg px-3 py-2 flex-1 font-mono"
@@ -344,7 +344,7 @@ export default function CartPage({
               {couponError && <div className="mt-2 text-sm text-red-600">{couponError}</div>}
             </div>
 
-            <div className="bg-white rounded-xl border mt-4 p-4">
+            <div className="card mt-4 p-4">
               <div className="flex justify-between text-sm">
                 <span>المجموع</span>
                 <span className="font-semibold">{store && formatPrice(subtotal, store.currency)}</span>

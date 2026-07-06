@@ -73,6 +73,15 @@ model Store {
   currency      Currency     @default(YER_SANAA)
   status        StoreStatus  @default(ACTIVE)
   plan          Plan         @default(FREE)
+  // ---- الفوترة والاشتراك (القسم 24 بالملحق) ----
+  // كود قصير يدخل في مرجع الدفع MOEEN-<code>-...
+  billingCode   Int          @unique @default(autoincrement())
+  // رصيد المحفظة المسبقة — لا يهبط تحت الصفر أبداً (القسم 24.8.5)
+  walletBalance Decimal      @default(0) @db.Decimal(12, 2)
+  // نهاية الفترة المدفوعة الحالية (للباقات المدفوعة)
+  currentPeriodEnd DateTime?
+  // مرحلة الإنذار الحالية لتفادي تكرار الرسائل (0=لا شيء، 1=يوم7، 2=يوم10، 3=معلّق، 4=إنذار نهائي)
+  dunningStage  Int          @default(0)
   // تأكيد طلبات COD هاتفياً قبل التجهيز — القسم 7.1 (مفعّل افتراضياً)
   codConfirmation Boolean    @default(true)
   shippingFee   Decimal      @default(0) @db.Decimal(12, 2)
@@ -90,6 +99,98 @@ model Store {
   coupons       Coupon[]
   shippingRates ShippingRate[]
   notifications Notification[]
+  invoices      Invoice[]
+  walletTxns    WalletTransaction[]
+}
+
+// ---------- الفوترة وتحصيل الاشتراك (القسم 24 بالملحق) ----------
+
+// فاتورة اشتراك — لكل فاتورة مرجع فريد عالمياً MOEEN-<كود التاجر>-<سنةشهر>
+model Invoice {
+  id          String        @id @default(cuid())
+  store       Store         @relation(fields: [storeId], references: [id])
+  storeId     String
+  reference   String        @unique
+  plan        Plan
+  months      Int           @default(1)
+  amount      Decimal       @db.Decimal(12, 2)
+  currency    Currency      @default(YER_SANAA)
+  status      InvoiceStatus @default(PENDING)
+  periodStart DateTime
+  periodEnd   DateTime
+  paidAt      DateTime?
+  paidVia     String? // WALLET / AGGREGATOR / MEPS / MANUAL ...
+  createdAt   DateTime      @default(now())
+  events      PaymentEvent[]
+
+  @@index([storeId, status])
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
+// حدث دفع وارد — كل المصادر تدخل طابور ابتلاع واحد (القسم 24.1)
+// idempotent: (المصدر + المعرف الخارجي) فريد — تكرار الإشعار لا يفعّل مرتين
+model PaymentEvent {
+  id               String             @id @default(cuid())
+  source           PaymentSource
+  externalId       String
+  reference        String?
+  amount           Decimal            @db.Decimal(12, 2)
+  currency         Currency           @default(YER_SANAA)
+  status           PaymentEventStatus @default(RECEIVED)
+  error            String?
+  matchedInvoice   Invoice?           @relation(fields: [matchedInvoiceId], references: [id])
+  matchedInvoiceId String?
+  payload          Json?
+  createdAt        DateTime           @default(now())
+  processedAt      DateTime?
+
+  @@unique([source, externalId])
+  @@index([status])
+}
+
+enum PaymentSource {
+  AGGREGATOR // eSadad / WeNet — المسار 2 (العمود الفقري)
+  MEPS // خصم من التسوية / بطاقة — المساران 1 و4
+  WALLET_RTP // طلب دفع من محفظة مباشرة — المسار 3
+  BANK_FEED // حوالة بمطابقة آلية — المسار 5
+  MANUAL // إيصال يدوي — المسار 6 (آخر حل)
+}
+
+enum PaymentEventStatus {
+  RECEIVED // وصل ولم يُعالج بعد
+  MATCHED // طُوبق وفُعّل آلياً
+  DUPLICATE // تكرار — تجوهل بأمان
+  EXCEPTION // غامض — طابور الاستثناءات للمراجعة البشرية (الهدف < 5%)
+}
+
+// دفتر أستاذ المحفظة — append-only: لا تعديل ولا حذف، فقط قيود (القسم 24.8)
+model WalletTransaction {
+  id             String     @id @default(cuid())
+  store          Store      @relation(fields: [storeId], references: [id])
+  storeId        String
+  type           WalletTxnType
+  // موجب = إيداع، سالب = خصم
+  amount         Decimal    @db.Decimal(12, 2)
+  balanceAfter   Decimal    @db.Decimal(12, 2)
+  idempotencyKey String?    @unique
+  note           String?
+  invoiceId      String?
+  eventId        String?
+  createdAt      DateTime   @default(now())
+
+  @@index([storeId, createdAt])
+}
+
+enum WalletTxnType {
+  TOPUP // شحن رصيد
+  CHARGE // خصم اشتراك
+  CREDIT // فائض دفع يُقيَّد للمحفظة
+  ADJUSTMENT // تسوية إدارية (بقيد موثّق)
 }
 
 // تصنيفات المنتجات لكل متجر (القسم 5.4)

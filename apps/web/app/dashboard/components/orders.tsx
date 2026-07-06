@@ -107,7 +107,7 @@ export function Orders({ token, store }: { token: string; store: any }) {
             {data.orders.map((o) => {
               const next = ORDER_STATUS_TRANSITIONS[o.status as OrderStatus] ?? [];
               return (
-                <div key={o.id} className="bg-white rounded-xl border p-4">
+                <div key={o.id} className="card p-4">
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono font-bold">{o.code}</span>

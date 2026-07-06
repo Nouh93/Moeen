@@ -49,6 +49,57 @@ export const PAYMENT_METHOD_AR: Record<PaymentMethod, string> = {
   COD: "الدفع عند الاستلام",
 };
 
+/**
+ * الباقات (القسم 3 من الوثيقة الرئيسية).
+ * الأسعار بالريال اليمني — قيم مبدئية تُعتمد نهائياً بعد الاختبار السعري.
+ * الدفع السنوي = 12 شهراً بسعر 10 (شهران مجاناً — القسم 24.3 بالملحق).
+ */
+export const PLANS = {
+  FREE: {
+    nameAr: "بداية",
+    monthlyPrice: 0,
+    maxProducts: 20,
+    maxOrdersPerMonth: 30,
+    coupons: false,
+    features: ["20 منتجاً", "30 طلباً شهرياً", "إشعارات واتساب أساسية", "رابط متجر على مُعين"],
+  },
+  GROWTH: {
+    nameAr: "نمو",
+    monthlyPrice: 8000,
+    maxProducts: Infinity,
+    maxOrdersPerMonth: Infinity,
+    coupons: true,
+    features: ["منتجات وطلبات بلا حدود", "كوبونات وعروض", "إشعارات واتساب كاملة", "تقارير متقدمة"],
+  },
+  PRO: {
+    nameAr: "احتراف",
+    monthlyPrice: 20000,
+    maxProducts: Infinity,
+    maxOrdersPerMonth: Infinity,
+    coupons: true,
+    features: ["كل مزايا نمو", "دومين خاص (قريباً)", "API و Webhooks (قريباً)", "أولوية في الدعم"],
+  },
+} as const;
+export type PlanId = keyof typeof PLANS;
+
+export const YEARLY_MONTHS_CHARGED = 10; // ادفع 10 واحصل على 12
+
+export function planPrice(plan: PlanId, months: 1 | 12): number {
+  const monthly = PLANS[plan].monthlyPrice;
+  return months === 12 ? monthly * YEARLY_MONTHS_CHARGED : monthly;
+}
+
+/** دورة الإنذار — القسم 24.4 بالملحق (أيام منذ الاستحقاق) */
+export const DUNNING = {
+  REMINDER_1: 7,
+  REMINDER_2: 10,
+  SUSPEND: 15,
+  FINAL_NOTICE: 30,
+  CLOSE: 37,
+  /** تاجر جديد: أول شهرين لا تعليق (القسم 24.5) */
+  NEW_MERCHANT_PROTECTION_DAYS: 60,
+} as const;
+
 /** التحقق من رقم جوال يمني (+967 أو محلي يبدأ بـ 7) */
 export function normalizeYemeniPhone(input: string): string | null {
   const digits = input.replace(/[\s\-()]/g, "");

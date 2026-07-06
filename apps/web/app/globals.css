@@ -1,20 +1,98 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-50: #f0fdf9;
-  --color-brand-100: #cbfcef;
-  --color-brand-500: #0d9488;
-  --color-brand-600: #0f766e;
-  --color-brand-700: #115e59;
-  --color-brand-900: #134e4a;
+  --color-brand-50: #effcf8;
+  --color-brand-100: #d7f7ee;
+  --color-brand-200: #b0efdf;
+  --color-brand-300: #7de0ca;
+  --color-brand-400: #47c9b0;
+  --color-brand-500: #23ad96;
+  --color-brand-600: #158b7a;
+  --color-brand-700: #137063;
+  --color-brand-800: #135951;
+  --color-brand-900: #144a44;
+  --color-brand-950: #052e2b;
+  --color-sand-50: #fbf8f2;
+  --color-sand-100: #f5eee0;
 }
 
 html {
   font-family:
-    "Segoe UI", Tahoma, "Noto Kufi Arabic", "Noto Sans Arabic", system-ui,
-    sans-serif;
+    var(--font-tajawal), "Segoe UI", Tahoma, "Noto Kufi Arabic",
+    "Noto Sans Arabic", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  @apply bg-gray-50 text-gray-900;
+  color: var(--color-gray-900);
+  background-color: #f7f8f7;
+  background-image:
+    radial-gradient(at 100% 0%, rgb(19 112 99 / 0.05) 0, transparent 45%),
+    radial-gradient(at 0% 100%, rgb(19 112 99 / 0.04) 0, transparent 45%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  /* بطاقة موحّدة — سطح مرتفع بحدود ناعمة وظل خفيف */
+  .card {
+    background: #fff;
+    border: 1px solid rgb(0 0 0 / 0.07);
+    border-radius: 1rem;
+    box-shadow:
+      0 1px 2px rgb(16 44 40 / 0.04),
+      0 4px 16px -8px rgb(16 44 40 / 0.06);
+  }
+
+  /* رأس متدرج بهوية مُعين */
+  .brand-header {
+    background:
+      radial-gradient(at 85% -20%, rgb(255 255 255 / 0.14) 0, transparent 50%),
+      linear-gradient(
+        120deg,
+        var(--color-brand-950),
+        var(--color-brand-800) 55%,
+        var(--color-brand-700)
+      );
+  }
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.15s ease;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 3px rgb(35 173 150 / 0.15);
+}
+
+::selection {
+  background: var(--color-brand-200);
+}
+
+/* أرقام لاتينية بعرض ثابت داخل المراجع والأكواد */
+.font-mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  letter-spacing: 0.02em;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
 }

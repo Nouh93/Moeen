@@ -42,7 +42,7 @@ export default async function StorePage({
 
   return (
     <main className="min-h-screen">
-      <header className="bg-brand-700 text-white">
+      <header className="brand-header text-white">
         <div className="max-w-5xl mx-auto px-4 py-6 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             {store.logoUrl && (

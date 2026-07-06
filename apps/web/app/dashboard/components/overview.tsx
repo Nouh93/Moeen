@@ -28,7 +28,7 @@ export function Overview({ token, store }: { token: string; store: any }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {cards.map((c) => (
-          <div key={c.label} className="bg-white rounded-xl border p-5">
+          <div key={c.label} className="card p-5">
             <div className="text-sm text-gray-500">{c.label}</div>
             <div className="text-3xl font-bold text-brand-700 mt-1">
               {formatPrice(c.revenue, store.currency)}
@@ -41,7 +41,7 @@ export function Overview({ token, store }: { token: string; store: any }) {
       </div>
 
       <div className="grid md:grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border p-5">
+        <div className="card p-5">
           <h3 className="font-bold mb-3">الطلبات حسب الحالة</h3>
           {Object.keys(stats.byStatus).length === 0 ? (
             <p className="text-gray-500 text-sm">لا طلبات بعد</p>
@@ -57,7 +57,7 @@ export function Overview({ token, store }: { token: string; store: any }) {
           )}
         </div>
 
-        <div className="bg-white rounded-xl border p-5">
+        <div className="card p-5">
           <h3 className="font-bold mb-3">الأكثر مبيعاً 🏆</h3>
           {stats.topProducts.length === 0 ? (
             <p className="text-gray-500 text-sm">لا مبيعات بعد</p>

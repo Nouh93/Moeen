@@ -73,7 +73,7 @@ export function Coupons({ token, store }: { token: string; store: any }) {
       </button>
 
       {showForm && (
-        <div className="bg-white rounded-xl border-2 border-brand-500 p-4 mt-4 space-y-3">
+        <div className="card border-2 border-brand-500 p-4 mt-4 space-y-3">
           <div className="grid grid-cols-2 gap-3">
             <input
               className="border rounded-lg px-3 py-2.5 w-full font-mono"
@@ -132,7 +132,7 @@ export function Coupons({ token, store }: { token: string; store: any }) {
 
       <div className="mt-4 space-y-2">
         {coupons.map((c) => (
-          <div key={c.id} className="bg-white rounded-xl border p-3 flex items-center gap-3 flex-wrap">
+          <div key={c.id} className="card p-3 flex items-center gap-3 flex-wrap">
             <span className="font-mono font-bold text-lg bg-purple-50 text-purple-700 rounded-lg px-3 py-1">🎟️ {c.code}</span>
             <span className="text-sm">
               {c.type === "PERCENT" ? `خصم ${Number(c.value)}%` : `خصم ${formatPrice(c.value, store.currency)}`}

@@ -11,6 +11,7 @@ import { CategoriesModule } from "./categories/categories.module";
 import { CouponsModule } from "./coupons/coupons.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { UploadsModule } from "./uploads/uploads.module";
+import { BillingModule } from "./billing/billing.module";
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UploadsModule } from "./uploads/uploads.module";
     CouponsModule,
     NotificationsModule,
     UploadsModule,
+    BillingModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

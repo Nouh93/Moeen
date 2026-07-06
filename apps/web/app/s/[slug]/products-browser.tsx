@@ -86,7 +86,7 @@ export function ProductsBrowser({
             <Link
               key={p.id}
               href={`/s/${slug}/p/${p.id}`}
-              className="bg-white rounded-xl border overflow-hidden hover:shadow-md transition-shadow"
+              className="card overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
             >
               <div className="aspect-square bg-gray-100 flex items-center justify-center text-5xl">
                 {p.imageUrl ? (

@@ -32,7 +32,7 @@ export default async function TrackPage({
   return (
     <main className="min-h-screen px-4 py-8">
       <div className="max-w-lg mx-auto">
-        <div className="bg-white rounded-2xl border p-6">
+        <div className="card rounded-2xl p-6">
           <div className="text-center">
             <div className="text-5xl">{STATUS_ICON[order.status] ?? "📦"}</div>
             <h1 className="text-xl font-bold mt-2">

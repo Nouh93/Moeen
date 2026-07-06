@@ -9,6 +9,7 @@ import { Orders } from "./components/orders";
 import { Products } from "./components/products";
 import { Coupons } from "./components/coupons";
 import { Settings } from "./components/settings";
+import { Subscription } from "./components/subscription";
 
 /** لوحة تحكم التاجر — تعمل كاملة من متصفح الجوال (القسم 12.1) */
 export default function Dashboard() {
@@ -87,7 +88,7 @@ function Login({ onLogin }: { onLogin: (token: string) => void }) {
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4">
-      <div className="bg-white rounded-2xl border p-8 max-w-sm w-full">
+      <div className="card rounded-2xl p-8 max-w-sm w-full">
         <Link href="/" className="block text-center text-2xl font-bold text-brand-700">
           مُعين 🇾🇪
         </Link>
@@ -152,6 +153,7 @@ const TABS = [
   ["orders", "📦 الطلبات"],
   ["products", "🛍️ المنتجات"],
   ["coupons", "🎟️ الكوبونات"],
+  ["subscription", "💳 الاشتراك"],
   ["settings", "⚙️ الإعدادات"],
 ] as const;
 
@@ -181,7 +183,7 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
 
   return (
     <main className="min-h-screen">
-      <header className="bg-brand-700 text-white">
+      <header className="brand-header text-white">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
           <div>
             <div className="font-bold text-lg">{store.name}</div>
@@ -208,11 +210,29 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
         </nav>
       </header>
 
+      {/* شريط التعليق — القسم 24.5: اللوحة تعمل، المتجر مخفي، زر سداد بارز */}
+      {store.status === "SUSPENDED" && (
+        <div className="bg-red-600 text-white">
+          <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between flex-wrap gap-2">
+            <div className="font-bold text-sm">
+              ⚠️ متجرك موقوف مؤقتاً عن الزوار لتأخر السداد — بياناتك بأمان تام، وسداد الاشتراك يعيده فوراً
+            </div>
+            <button
+              onClick={() => setTab("subscription")}
+              className="bg-white text-red-700 rounded-lg px-4 py-1.5 text-sm font-bold hover:bg-red-50"
+            >
+              ادفع الآن ←
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 py-6">
         {tab === "overview" && <Overview token={token} store={store} />}
         {tab === "orders" && <Orders token={token} store={store} />}
         {tab === "products" && <Products token={token} store={store} />}
         {tab === "coupons" && <Coupons token={token} store={store} />}
+        {tab === "subscription" && <Subscription token={token} store={store} onChanged={load} />}
         {tab === "settings" && <Settings token={token} store={store} onSaved={load} />}
       </div>
     </main>
@@ -267,7 +287,7 @@ function CreateStore({ token, onCreated }: { token: string; onCreated: () => voi
 
   return (
     <main className="min-h-screen flex items-center justify-center px-4 py-8">
-      <div className="bg-white rounded-2xl border p-8 max-w-md w-full">
+      <div className="card rounded-2xl p-8 max-w-md w-full">
         <h1 className="text-2xl font-bold text-center">أنشئ متجرك 🎉</h1>
         <p className="text-gray-500 text-sm text-center mt-1">ثلاث خطوات ومتجرك يستقبل الطلبات</p>
         <div className="mt-6 space-y-3">

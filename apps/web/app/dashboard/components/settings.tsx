@@ -95,7 +95,7 @@ export function Settings({
 
   return (
     <div className="grid lg:grid-cols-2 gap-4 items-start">
-      <div className="bg-white rounded-xl border p-4 space-y-3">
+      <div className="card p-4 space-y-3">
         <h3 className="font-bold">بيانات المتجر</h3>
 
         <div className="flex items-center gap-3">
@@ -176,7 +176,7 @@ export function Settings({
         {msg && <div className="text-sm text-brand-700">{msg}</div>}
       </div>
 
-      <div className="bg-white rounded-xl border p-4">
+      <div className="card p-4">
         <h3 className="font-bold mb-1">أسعار الشحن حسب المحافظة</h3>
         <p className="text-xs text-gray-500 mb-3">
           المحافظات غير المذكورة هنا تُحسب بالرسوم الافتراضية

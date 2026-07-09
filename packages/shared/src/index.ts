@@ -100,9 +100,19 @@ export const DUNNING = {
   NEW_MERCHANT_PROTECTION_DAYS: 60,
 } as const;
 
-/** التحقق من رقم جوال يمني (+967 أو محلي يبدأ بـ 7) */
+/**
+ * التحقق من رقم الجوال وتطبيعه.
+ * الأساس: أرقام يمنية (+967 أو محلي يبدأ بـ 7).
+ * ويُقبل بالصيغة الدولية الكاملة: سعودي (+9665...) وقطري (+974...) —
+ * لأصحاب المنصة والمغتربين الذين يديرون متاجرهم من الخارج.
+ */
 export function normalizeYemeniPhone(input: string): string | null {
   const digits = input.replace(/[\s\-()]/g, "");
-  const m = digits.match(/^(?:\+?967)?(7[0-9]{8})$/);
-  return m ? `+967${m[1]}` : null;
+  const yemeni = digits.match(/^(?:\+?967)?(7[0-9]{8})$/);
+  if (yemeni) return `+967${yemeni[1]}`;
+  const saudi = digits.match(/^\+?966(5[0-9]{8})$/);
+  if (saudi) return `+966${saudi[1]}`;
+  const qatari = digits.match(/^\+?974([0-9]{8})$/);
+  if (qatari) return `+974${qatari[1]}`;
+  return null;
 }

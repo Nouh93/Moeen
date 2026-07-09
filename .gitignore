@@ -6,5 +6,5 @@ dist/
 .env.local
 .DS_Store
 coverage/
-uploads/
+/apps/api/uploads/
 dump.rdb

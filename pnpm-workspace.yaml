@@ -7,3 +7,4 @@ onlyBuiltDependencies:
   - prisma
   - esbuild
   - sharp
+  - msgpackr-extract

@@ -6,6 +6,7 @@ import { CURRENCY_AR } from "@moeen/shared";
 import { api } from "@/lib/api";
 import { BrandLogo } from "../components/brand";
 import {
+  BarChart3,
   CreditCard,
   Star,
   ExternalLink,
@@ -15,6 +16,7 @@ import {
   ShoppingBag,
   TicketPercent,
   TriangleAlert,
+  Users,
 } from "lucide-react";
 import { Overview } from "./components/overview";
 import { Orders } from "./components/orders";
@@ -23,6 +25,8 @@ import { Coupons } from "./components/coupons";
 import { Settings } from "./components/settings";
 import { Subscription } from "./components/subscription";
 import { Reviews } from "./components/reviews";
+import { Reports } from "./components/reports";
+import { Customers } from "./components/customers";
 
 /** لوحة تحكم التاجر — تعمل كاملة من متصفح الجوال (القسم 12.1) */
 export default function Dashboard() {
@@ -165,6 +169,8 @@ const TABS = [
   ["overview", "نظرة عامة", LayoutDashboard],
   ["orders", "الطلبات", Package],
   ["products", "المنتجات", ShoppingBag],
+  ["reports", "التقارير", BarChart3],
+  ["customers", "العملاء", Users],
   ["coupons", "الكوبونات", TicketPercent],
   ["reviews", "التقييمات", Star],
   ["subscription", "الاشتراك", CreditCard],
@@ -286,6 +292,8 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
         {tab === "overview" && <Overview token={token} store={store} />}
         {tab === "orders" && <Orders token={token} store={store} />}
         {tab === "products" && <Products token={token} store={store} />}
+        {tab === "reports" && <Reports token={token} store={store} />}
+        {tab === "customers" && <Customers token={token} store={store} />}
         {tab === "coupons" && <Coupons token={token} store={store} />}
         {tab === "reviews" && <Reviews token={token} store={store} />}
         {tab === "subscription" && <Subscription token={token} store={store} onChanged={load} />}

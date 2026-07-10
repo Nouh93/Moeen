@@ -201,6 +201,18 @@ export class StoresController {
     return this.stores.stats(id, user.sub);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get("stores/:id/reports")
+  reports(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.stores.reports(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get("stores/:id/customers")
+  customers(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.stores.customers(id, user.sub);
+  }
+
   // ---- أسعار الشحن ----
 
   @UseGuards(JwtAuthGuard)

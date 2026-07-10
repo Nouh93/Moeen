@@ -283,4 +283,109 @@ export class StoresService {
       })),
     };
   }
+
+  // ---- تقارير التاجر (القسم 11.2): مبيعات 30 يوماً + أفضل المنتجات + المحافظات ----
+
+  async reports(storeId: string, ownerId: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    const since30 = new Date(Date.now() - 30 * 86_400_000);
+    const since90 = new Date(Date.now() - 90 * 86_400_000);
+    const sold = { status: { notIn: ["CANCELLED" as const, "RETURNED" as const] } };
+
+    const [orders30, items90, byGov, governorates] = await Promise.all([
+      this.prisma.order.findMany({
+        where: { storeId, createdAt: { gte: since30 }, ...sold },
+        select: { createdAt: true, total: true },
+      }),
+      this.prisma.orderItem.findMany({
+        where: { order: { storeId, createdAt: { gte: since90 }, ...sold } },
+        select: { name: true, quantity: true, price: true },
+      }),
+      this.prisma.order.groupBy({
+        by: ["governorateId"],
+        where: { storeId, createdAt: { gte: since90 }, ...sold },
+        _count: true,
+      }),
+      this.prisma.governorate.findMany({ select: { id: true, nameAr: true } }),
+    ]);
+
+    // سلسلة يومية كاملة (الأيام بلا مبيعات = صفر) بتوقيت الخادم
+    const days: { date: string; orders: number; revenue: number }[] = [];
+    const byDay = new Map<string, { orders: number; revenue: number }>();
+    for (const o of orders30) {
+      const d = o.createdAt.toISOString().slice(0, 10);
+      const cur = byDay.get(d) ?? { orders: 0, revenue: 0 };
+      cur.orders += 1;
+      cur.revenue += Number(o.total);
+      byDay.set(d, cur);
+    }
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
+      days.push({ date: d, ...(byDay.get(d) ?? { orders: 0, revenue: 0 }) });
+    }
+
+    const byProduct = new Map<string, { sold: number; revenue: number }>();
+    for (const it of items90) {
+      const cur = byProduct.get(it.name) ?? { sold: 0, revenue: 0 };
+      cur.sold += it.quantity;
+      cur.revenue += Number(it.price) * it.quantity;
+      byProduct.set(it.name, cur);
+    }
+    const topProducts = [...byProduct.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 7);
+
+    const govName = new Map(governorates.map((g) => [g.id, g.nameAr]));
+    const byGovernorate = byGov
+      .map((g) => ({
+        name: g.governorateId ? (govName.get(g.governorateId) ?? "غير محدد") : "غير محدد",
+        orders: g._count,
+      }))
+      .sort((a, b) => b.orders - a.orders)
+      .slice(0, 8);
+
+    return { days, topProducts, byGovernorate };
+  }
+
+  /** عملاء المتجر (القسم 11.3): تجميع من الطلبات — عدد الطلبات والإنفاق وآخر طلب */
+  async customers(storeId: string, ownerId: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    const orders = await this.prisma.order.findMany({
+      where: { storeId },
+      orderBy: { createdAt: "desc" },
+      select: {
+        customerName: true,
+        customerPhone: true,
+        total: true,
+        status: true,
+        createdAt: true,
+      },
+      take: 2000,
+    });
+    const map = new Map<
+      string,
+      { name: string; phone: string; orders: number; delivered: number; spent: number; lastOrderAt: Date }
+    >();
+    for (const o of orders) {
+      const cur = map.get(o.customerPhone);
+      const delivered = o.status === "DELIVERED" ? 1 : 0;
+      const spent = ["CANCELLED", "RETURNED"].includes(o.status) ? 0 : Number(o.total);
+      if (cur) {
+        cur.orders += 1;
+        cur.delivered += delivered;
+        cur.spent += spent;
+      } else {
+        map.set(o.customerPhone, {
+          name: o.customerName, // الأحدث لأن الترتيب تنازلي
+          phone: o.customerPhone,
+          orders: 1,
+          delivered,
+          spent,
+          lastOrderAt: o.createdAt,
+        });
+      }
+    }
+    return [...map.values()].sort((a, b) => b.spent - a.spent);
+  }
 }

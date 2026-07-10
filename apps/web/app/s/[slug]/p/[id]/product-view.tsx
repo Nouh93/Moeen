@@ -64,7 +64,7 @@ export function ProductView({
                 key={url}
                 onClick={() => setActiveImage(i)}
                 className={`w-16 h-16 rounded-xl overflow-hidden border-2 shrink-0 ${
-                  i === activeImage ? "border-brand-600" : "border-transparent"
+                  i === activeImage ? "border-[var(--sf-600)]" : "border-transparent"
                 }`}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -78,7 +78,7 @@ export function ProductView({
       <div>
         <h1 className="text-2xl font-bold">{product.name}</h1>
         <div className="mt-3 flex items-center gap-3">
-          <span className="text-3xl font-bold text-brand-700">
+          <span className="text-3xl font-bold text-[var(--sf-700)]">
             {formatPrice(price, store.currency)}
           </span>
           {product.compareAtPrice && !variant?.price && (
@@ -99,8 +99,8 @@ export function ProductView({
                   disabled={v.stock === 0}
                   className={`rounded-xl px-4 py-2 text-sm font-semibold border-2 ${
                     v.id === variantId
-                      ? "border-brand-600 bg-brand-50 text-brand-800"
-                      : "border-gray-200 bg-white hover:border-brand-300"
+                      ? "border-[var(--sf-600)] bg-[color-mix(in_srgb,var(--sf-600)_8%,white)] text-[var(--sf-800)]"
+                      : "border-gray-200 bg-white hover:border-[color-mix(in_srgb,var(--sf-600)_45%,white)]"
                   } disabled:opacity-40 disabled:line-through`}
                 >
                   {v.name}
@@ -131,7 +131,7 @@ export function ProductView({
           <button
             disabled={outOfStock}
             onClick={add}
-            className="flex-1 bg-brand-600 text-white rounded-xl py-3 font-bold text-lg hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="flex-1 bg-[var(--sf-600)] text-white rounded-xl py-3 font-bold text-lg hover:bg-[var(--sf-700)] disabled:bg-gray-300 disabled:cursor-not-allowed"
           >
             {outOfStock ? (
               "نفدت الكمية"

@@ -94,6 +94,42 @@ export default async function StorePage({
         </div>
       </header>
 
+      {store.coverUrl && (
+        <div className="max-w-5xl mx-auto px-4 mt-5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={imgUrl(store.coverUrl)}
+            alt=""
+            className="w-full aspect-[3/1] object-cover rounded-2xl shadow-sm"
+          />
+        </div>
+      )}
+
+      {Array.isArray(store.banners) && store.banners.length > 0 && (
+        <div className="max-w-5xl mx-auto px-4 mt-5">
+          <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory pb-2 [-webkit-overflow-scrolling:touch]">
+            {store.banners.map((b: any, i: number) => {
+              const img = (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={imgUrl(b.imageUrl)}
+                  alt=""
+                  loading="lazy"
+                  className="h-36 md:h-44 rounded-xl object-cover snap-start shrink-0"
+                />
+              );
+              return b.link ? (
+                <a key={i} href={b.link} target="_blank" rel="noopener noreferrer" className="shrink-0">
+                  {img}
+                </a>
+              ) : (
+                <span key={i} className="shrink-0">{img}</span>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="max-w-5xl mx-auto px-4 py-6">
         <ProductsBrowser
           slug={slug}

@@ -202,17 +202,17 @@ export default function CartPage({
           <p className="text-gray-600 mt-2">
             سيتواصل معك المتجر لتأكيد الطلب. رمز التتبع:
           </p>
-          <div className="mt-3 bg-brand-50 text-brand-700 font-mono text-2xl font-bold rounded-xl py-3">
+          <div className="mt-3 bg-brand-50 text-[var(--sf-700)] font-mono text-2xl font-bold rounded-xl py-3">
             {state.code}
           </div>
           <div className="mt-6 flex flex-col gap-2">
             <Link
               href={`/track/${state.code}`}
-              className="bg-brand-600 text-white rounded-xl py-3 font-bold hover:bg-brand-700"
+              className="bg-[var(--sf-600)] text-white rounded-xl py-3 font-bold hover:bg-[var(--sf-700)]"
             >
               تتبّع طلبك
             </Link>
-            <Link href={`/s/${slug}`} className="text-brand-600 py-2">
+            <Link href={`/s/${slug}`} className="text-[var(--sf-600)] py-2">
               العودة للمتجر
             </Link>
           </div>
@@ -232,12 +232,12 @@ export default function CartPage({
       </header>
 
       <div className="max-w-3xl mx-auto px-4 py-6">
-        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2"><ShoppingCart size={24} className="text-brand-600" /> سلتك وإتمام الطلب</h1>
+        <h1 className="text-2xl font-bold mb-4 flex items-center gap-2"><ShoppingCart size={24} className="text-[var(--sf-600)]" /> سلتك وإتمام الطلب</h1>
 
         {items.length === 0 ? (
           <p className="text-center text-gray-500 py-16">
             سلتك فارغة —{" "}
-            <Link href={`/s/${slug}`} className="text-brand-600 underline">
+            <Link href={`/s/${slug}`} className="text-[var(--sf-600)] underline">
               تصفح المنتجات
             </Link>
           </p>
@@ -256,7 +256,7 @@ export default function CartPage({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="font-semibold text-sm truncate">{i.name}</div>
-                    <div className="text-brand-700 font-bold text-sm">
+                    <div className="text-[var(--sf-700)] font-bold text-sm">
                       {store && formatPrice(i.price, store.currency)}
                     </div>
                   </div>
@@ -395,7 +395,7 @@ export default function CartPage({
                 <span className="flex items-center gap-1.5">
                   الإجمالي — تدفعه عند الاستلام <Banknote size={18} className="text-green-600" />
                 </span>
-                <span className="text-brand-700">
+                <span className="text-[var(--sf-700)]">
                   {store && formatPrice(subtotal - discount + shipping, store.currency)}
                 </span>
               </div>
@@ -413,7 +413,7 @@ export default function CartPage({
             <button
               onClick={() => submit()}
               disabled={state.phase === "submitting"}
-              className="mt-4 w-full bg-brand-600 text-white rounded-xl py-4 text-lg font-bold hover:bg-brand-700 disabled:opacity-60"
+              className="mt-4 w-full bg-[var(--sf-600)] text-white rounded-xl py-4 text-lg font-bold hover:bg-[var(--sf-700)] disabled:opacity-60"
             >
               {state.phase === "submitting" ? "جارٍ إرسال طلبك..." : "تأكيد الطلب ✓"}
             </button>

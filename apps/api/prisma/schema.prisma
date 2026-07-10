@@ -87,6 +87,18 @@ model Store {
   shippingFee   Decimal      @default(0) @db.Decimal(12, 2)
   // توصيل مجاني فوق مبلغ — أداة تسويقية (القسم 8.2)
   freeShippingAbove Decimal? @db.Decimal(12, 2)
+  // ---- تخصيص مظهر المتجر (القسم 5.4): هوية بصرية لكل تاجر ----
+  // لون المتجر الأساسي (hex) — يطغى على لون المنصة في واجهة المتجر
+  themeColor    String?
+  // صورة غلاف أعلى المتجر
+  coverUrl      String?
+  // بنرات ترويجية [{imageUrl, link?}] حتى 5
+  banners       Json         @default("[]")
+  // صفحات المتجر: من نحن + سياسة الاستبدال والإرجاع
+  aboutText     String?
+  returnPolicy  String?
+  // روابط التواصل {instagram, facebook, tiktok, x}
+  socialLinks   Json         @default("{}")
   owner         User         @relation(fields: [ownerId], references: [id])
   ownerId       String
   governorate   Governorate? @relation(fields: [governorateId], references: [id])
@@ -398,6 +410,8 @@ model Product {
   images         Json          @default("[]")
   trackStock     Boolean       @default(false)
   stock          Int           @default(0)
+  // منتج مميز — يتصدّر واجهة المتجر بشارة (القسم 5.4)
+  featured       Boolean       @default(false)
   status         ProductStatus @default(ACTIVE)
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

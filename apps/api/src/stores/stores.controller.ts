@@ -9,6 +9,8 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import {
+  ArrayMaxSize,
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -16,8 +18,12 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  Matches,
+  MaxLength,
   Min,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { CURRENCIES } from "@moeen/shared";
 import { AuthUser, CurrentUser, JwtAuthGuard } from "../auth/jwt.guard";
 import { StoresService } from "./stores.service";
@@ -57,6 +63,34 @@ class CreateStoreDto {
   shippingFee?: number;
 }
 
+class BannerDto {
+  @IsString()
+  @IsNotEmpty()
+  imageUrl: string;
+
+  @IsOptional()
+  @IsString()
+  link?: string;
+}
+
+class SocialLinksDto {
+  @IsOptional()
+  @IsString()
+  instagram?: string;
+
+  @IsOptional()
+  @IsString()
+  facebook?: string;
+
+  @IsOptional()
+  @IsString()
+  tiktok?: string;
+
+  @IsOptional()
+  @IsString()
+  x?: string;
+}
+
 class UpdateStoreDto {
   @IsOptional()
   @IsString()
@@ -73,6 +107,37 @@ class UpdateStoreDto {
   @IsOptional()
   @IsString()
   logoUrl?: string;
+
+  // ---- تخصيص المظهر (القسم 5.4) ----
+  @IsOptional()
+  @Matches(/^#[0-9a-fA-F]{6}$/, { message: "لون غير صالح — الصيغة #RRGGBB" })
+  themeColor?: string | null;
+
+  @IsOptional()
+  @IsString()
+  coverUrl?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(5, { message: "الحد الأقصى 5 بنرات" })
+  @ValidateNested({ each: true })
+  @Type(() => BannerDto)
+  banners?: BannerDto[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  aboutText?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(4000)
+  returnPolicy?: string | null;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => SocialLinksDto)
+  socialLinks?: SocialLinksDto;
 
   @IsOptional()
   @IsNumber()

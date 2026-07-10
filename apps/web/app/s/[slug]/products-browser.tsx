@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { ImageIcon, Search } from "lucide-react";
+import { ImageIcon, Search, Star } from "lucide-react";
 import { formatPrice, imgUrl } from "@/lib/api";
 
 /** شبكة المنتجات مع التصنيفات والبحث — بحث عربي متسامح (القسم 6.5) */
@@ -51,7 +51,7 @@ export function ProductsBrowser({
             <button
               onClick={() => setCategory("")}
               className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-                !category ? "bg-brand-600 text-white" : "bg-white border hover:bg-gray-100"
+                !category ? "bg-[var(--sf-600)] text-white" : "bg-white border hover:bg-gray-100"
               }`}
             >
               الكل
@@ -61,7 +61,7 @@ export function ProductsBrowser({
                 key={c.id}
                 onClick={() => setCategory(c.id === category ? "" : c.id)}
                 className={`rounded-full px-4 py-1.5 text-sm font-semibold ${
-                  category === c.id ? "bg-brand-600 text-white" : "bg-white border hover:bg-gray-100"
+                  category === c.id ? "bg-[var(--sf-600)] text-white" : "bg-white border hover:bg-gray-100"
                 }`}
               >
                 {c.name}
@@ -92,7 +92,12 @@ export function ProductsBrowser({
               href={`/s/${slug}/p/${p.id}`}
               className="card overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-200"
             >
-              <div className="aspect-square bg-gray-100 flex items-center justify-center text-5xl">
+              <div className="relative aspect-square bg-gray-100 flex items-center justify-center text-5xl">
+                {p.featured && (
+                  <span className="absolute top-2 right-2 z-10 bg-amber-400 text-brand-950 text-[11px] font-bold rounded-full px-2 py-0.5 inline-flex items-center gap-1 shadow-sm">
+                    <Star size={11} className="fill-brand-950" /> مميز
+                  </span>
+                )}
                 {p.imageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={imgUrl(p.imageUrl)} alt={p.name} loading="lazy" className="w-full h-full object-cover" />
@@ -103,7 +108,7 @@ export function ProductsBrowser({
               <div className="p-3">
                 <div className="font-semibold text-sm leading-snug line-clamp-2">{p.name}</div>
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
-                  <span className="text-brand-700 font-bold">{formatPrice(p.price, currency)}</span>
+                  <span className="text-[var(--sf-700)] font-bold">{formatPrice(p.price, currency)}</span>
                   {p.compareAtPrice && (
                     <span className="text-xs text-gray-400 line-through">
                       {formatPrice(p.compareAtPrice, currency)}

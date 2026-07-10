@@ -55,7 +55,7 @@ export function AddToCartButton({
         setAdded(true);
         setTimeout(() => setAdded(false), 1500);
       }}
-      className="flex-1 bg-brand-600 text-white rounded-xl py-3 font-bold text-lg hover:bg-brand-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
+      className="flex-1 bg-[var(--sf-600)] text-white rounded-xl py-3 font-bold text-lg hover:bg-[var(--sf-700)] disabled:bg-gray-300 disabled:cursor-not-allowed"
     >
       {disabled ? "نفدت الكمية" : added ? (<span className="inline-flex items-center gap-2"><Check size={20} /> أُضيف للسلة</span>) : (<span className="inline-flex items-center gap-2"><ShoppingCart size={20} /> أضف للسلة</span>)}
     </button>

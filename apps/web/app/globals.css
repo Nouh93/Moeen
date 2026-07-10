@@ -68,6 +68,26 @@ h3,
       linear-gradient(130deg, var(--color-brand-950) 20%, var(--color-brand-900) 60%, var(--color-brand-800));
   }
 
+  /*
+   * تخصيص لون المتجر (القسم 5.4): واجهة كل متجر تلتقط لون تاجرها
+   * عبر متغيرات --sf-* التي يضبطها layout المتجر؛ الافتراضي لوحة مُعين.
+   */
+  .storefront {
+    --sf-600: var(--color-brand-600);
+    --sf-700: var(--color-brand-700);
+    --sf-800: var(--color-brand-800);
+    --sf-900: var(--color-brand-900);
+    --sf-950: var(--color-brand-950);
+  }
+
+  .storefront .brand-header {
+    background-color: var(--sf-950);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='14' viewBox='0 0 28 14'%3E%3Cpath d='M0 14 L7 4 L14 14 L21 4 L28 14' fill='none' stroke='%23ffffff' stroke-opacity='0.045' stroke-width='1.4'/%3E%3C/svg%3E"),
+      radial-gradient(at 88% -30%, rgb(217 147 44 / 0.18) 0, transparent 45%),
+      linear-gradient(130deg, var(--sf-950) 20%, var(--sf-900) 60%, var(--sf-800));
+  }
+
   /* شريط زخرفي رفيع — يفصل الأقسام كإفريز */
   .frieze {
     height: 8px;

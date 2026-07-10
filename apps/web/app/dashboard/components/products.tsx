@@ -12,6 +12,7 @@ const EMPTY_FORM = {
   imageUrl: "",
   images: [] as string[],
   trackStock: false,
+  featured: false,
   stock: "0",
   categoryId: "",
   variants: [] as { id?: string; name: string; price: string; stock: string }[],
@@ -49,6 +50,7 @@ export function Products({ token, store }: { token: string; store: any }) {
       imageUrl: p.imageUrl ?? "",
       images: (p.images as string[]) ?? [],
       trackStock: p.trackStock,
+      featured: !!p.featured,
       stock: String(p.stock),
       categoryId: p.categoryId ?? "",
       variants: (p.variants ?? []).map((v: any) => ({
@@ -89,6 +91,7 @@ export function Products({ token, store }: { token: string; store: any }) {
       imageUrl: form.imageUrl || undefined,
       images: form.images,
       trackStock: form.trackStock,
+      featured: form.featured,
       stock: Number(form.stock) || 0,
       categoryId: form.categoryId || undefined,
       variants: form.variants
@@ -388,6 +391,14 @@ export function Products({ token, store }: { token: string; store: any }) {
                 onChange={(e) => setForm({ ...form, stock: e.target.value })}
               />
             )}
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={form.featured}
+                onChange={(e) => setForm({ ...form, featured: e.target.checked })}
+              />
+              منتج مميز ⭐ (يتصدّر واجهة المتجر)
+            </label>
           </div>
           <button
             onClick={save}
@@ -414,6 +425,7 @@ export function Products({ token, store }: { token: string; store: any }) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-sm truncate">
+                {p.featured && <span title="منتج مميز">⭐ </span>}
                 {p.name}
                 {p.category && (
                   <span className="text-xs bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 mr-2">{p.category.name}</span>

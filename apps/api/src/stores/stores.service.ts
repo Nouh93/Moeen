@@ -92,10 +92,35 @@ export class StoresService {
       whatsapp: string;
       shippingFee: number;
       codConfirmation: boolean;
+      logoUrl: string;
+      freeShippingAbove: number | null;
+      themeColor: string | null;
+      coverUrl: string | null;
+      banners: { imageUrl: string; link?: string }[];
+      aboutText: string | null;
+      returnPolicy: string | null;
+      socialLinks: {
+        instagram?: string;
+        facebook?: string;
+        tiktok?: string;
+        x?: string;
+      };
     }>,
   ) {
     await this.ownedByOrThrow(storeId, ownerId);
-    return this.prisma.store.update({ where: { id: storeId }, data });
+    const { banners, socialLinks, ...rest } = data;
+    return this.prisma.store.update({
+      where: { id: storeId },
+      data: {
+        ...rest,
+        ...(banners !== undefined
+          ? { banners: JSON.parse(JSON.stringify(banners)) }
+          : {}),
+        ...(socialLinks !== undefined
+          ? { socialLinks: JSON.parse(JSON.stringify(socialLinks)) }
+          : {}),
+      },
+    });
   }
 
   /** واجهة المتجر العامة: بيانات المتجر + منتجاته + شارات الثقة (القسم 25.1) */
@@ -108,7 +133,8 @@ export class StoresService {
         shippingRates: { include: { governorate: true } },
         products: {
           where: { status: "ACTIVE" },
-          orderBy: { createdAt: "desc" },
+          // المنتجات المميزة تتصدّر الواجهة (القسم 5.4)
+          orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
           include: { variants: { orderBy: { sortOrder: "asc" } } },
         },
       },

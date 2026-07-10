@@ -47,6 +47,11 @@ class CreateProductDto {
   @IsBoolean()
   trackStock?: boolean;
 
+  // منتج مميز يتصدّر واجهة المتجر (القسم 5.4)
+  @IsOptional()
+  @IsBoolean()
+  featured?: boolean;
+
   @IsOptional()
   @IsInt()
   @Min(0)

@@ -44,9 +44,10 @@ export class AuthService {
       data: { phone, code, expiresAt: new Date(Date.now() + OTP_TTL_MS) },
     });
 
-    // TODO المرحلة 2: الإرسال عبر WhatsApp Business API (BSP) ثم SMS احتياطاً
+    // TODO المرحلة 2: الإرسال عبر WhatsApp Business API (BSP) ثم SMS احتياطاً.
+    // حتى ربط المزوّد يُسجَّل الرمز في سجل الحاوية ليقرأه المشغّل — يُزال هذا السطر عند التفعيل.
+    console.log(`[OTP] ${phone} → ${code}`);
     const dev = process.env.NODE_ENV !== "production";
-    if (dev) console.log(`[OTP] ${phone} → ${code}`);
     return { phone, sent: true, ...(dev ? { devCode: code } : {}) };
   }
 

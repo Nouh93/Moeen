@@ -17,7 +17,10 @@ export async function generateMetadata({
     if (!product) return { title: store.name };
     return {
       title: `${product.name} — ${store.name}`,
-      description: product.description ?? `اطلب ${product.name} من ${store.name} — الدفع عند الاستلام`,
+      description:
+        product.seoDescription ??
+        product.description ??
+        `اطلب ${product.name} من ${store.name} — الدفع عند الاستلام`,
       openGraph: {
         title: product.name,
         ...(product.imageUrl ? { images: [imgUrl(product.imageUrl)!] } : {}),

@@ -44,7 +44,9 @@ export function ProductsBrowser({
       list = list.filter(
         (p) =>
           normalize(p.name).includes(nq) ||
-          (p.description && normalize(p.description).includes(nq)),
+          (p.description && normalize(p.description).includes(nq)) ||
+          (p.brand && normalize(p.brand).includes(nq)) ||
+          (Array.isArray(p.tags) && p.tags.some((t: string) => normalize(t).includes(nq))),
       );
     }
     return list;

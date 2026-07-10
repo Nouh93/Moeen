@@ -130,6 +130,17 @@ export class OrdersService {
         throw new BadRequestException("أحد المنتجات لم يعد متوفراً — حدّث سلتك");
       }
       const qty = Math.max(1, Math.floor(item.quantity));
+      // حدود الكمية لكل طلب (القسم 5.5)
+      if (qty < product.minQty) {
+        throw new BadRequestException(
+          `أقل كمية للطلب من "${product.name}" هي ${product.minQty}`,
+        );
+      }
+      if (product.maxQty && qty > product.maxQty) {
+        throw new BadRequestException(
+          `أقصى كمية للطلب من "${product.name}" هي ${product.maxQty}`,
+        );
+      }
       // خيار المنتج (مقاس/لون) — سعر ومخزون مستقلان (القسم 5.1)
       const variant = item.variantId
         ? product.variants.find((v) => v.id === item.variantId)

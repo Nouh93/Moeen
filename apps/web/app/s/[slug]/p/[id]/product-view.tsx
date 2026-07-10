@@ -34,13 +34,17 @@ export function ProductView({
     : product.trackStock && product.stock > 0 && product.stock <= 5 && product.stock;
 
   function add() {
-    addToCart(slug, {
-      productId: product.id,
-      variantId: variant?.id,
-      name: variant ? `${product.name} — ${variant.name}` : product.name,
-      price: Number(price),
-      imageUrl: gallery[0],
-    });
+    addToCart(
+      slug,
+      {
+        productId: product.id,
+        variantId: variant?.id,
+        name: variant ? `${product.name} — ${variant.name}` : product.name,
+        price: Number(price),
+        imageUrl: gallery[0],
+      },
+      product.minQty ?? 1, // أول إضافة تبدأ من أقل كمية للطلب
+    );
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   }
@@ -138,6 +142,30 @@ export function ProductView({
           <p className="mt-4 text-gray-700 leading-relaxed whitespace-pre-line">
             {product.description}
           </p>
+        )}
+
+        {(product.brand || (product.tags?.length ?? 0) > 0 || product.sku || (product.minQty ?? 1) > 1 || product.maxQty) && (
+          <div className="mt-4 space-y-2 text-sm text-gray-600">
+            {product.brand && (
+              <div>
+                الماركة: <span className="font-semibold text-gray-800">{product.brand}</span>
+              </div>
+            )}
+            {(product.minQty ?? 1) > 1 && <div>أقل كمية للطلب: {product.minQty}</div>}
+            {product.maxQty && <div>أقصى كمية لكل طلب: {product.maxQty}</div>}
+            {product.sku && (
+              <div className="text-xs text-gray-400" dir="ltr">SKU: {product.sku}</div>
+            )}
+            {(product.tags?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {product.tags.map((t: string) => (
+                  <span key={t} className="bg-gray-100 text-gray-600 rounded-full px-2.5 py-0.5 text-xs">
+                    #{t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="mt-8 flex gap-3">

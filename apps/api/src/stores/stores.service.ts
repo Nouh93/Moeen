@@ -174,8 +174,9 @@ export class StoresService {
       rating._count >= 5 &&
       completionRate >= 0.85;
 
-    // العروض التلقائية (القسم 9.3): سعر بعد الخصم لكل منتج مشمول
-    const productsWithOffers = store.products.map((p) => {
+    // العروض التلقائية (القسم 9.3): سعر بعد الخصم لكل منتج مشمول.
+    // سعر التكلفة سر تجاري — لا يخرج للواجهة العامة أبداً
+    const productsWithOffers = store.products.map(({ costPrice, ...p }) => {
       const percent = bestOfferPercent(offers, p.categoryId);
       if (!percent) return p;
       const title = offers

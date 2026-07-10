@@ -33,11 +33,15 @@ export function saveCart(slug: string, items: CartItem[]) {
   window.dispatchEvent(new Event("moeen-cart-changed"));
 }
 
-export function addToCart(slug: string, item: Omit<CartItem, "quantity">) {
+export function addToCart(
+  slug: string,
+  item: Omit<CartItem, "quantity">,
+  initialQty = 1,
+) {
   const items = getCart(slug);
   const existing = items.find((i) => itemKey(i) === itemKey(item));
   if (existing) existing.quantity += 1;
-  else items.push({ ...item, quantity: 1 });
+  else items.push({ ...item, quantity: Math.max(1, initialQty) });
   saveCart(slug, items);
 }
 

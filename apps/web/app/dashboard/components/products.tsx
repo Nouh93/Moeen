@@ -15,6 +15,15 @@ const EMPTY_FORM = {
   featured: false,
   stock: "0",
   categoryId: "",
+  sku: "",
+  barcode: "",
+  costPrice: "",
+  weightGrams: "",
+  brand: "",
+  tags: "",
+  minQty: "1",
+  maxQty: "",
+  seoDescription: "",
   variants: [] as { id?: string; name: string; price: string; stock: string }[],
 };
 
@@ -53,6 +62,15 @@ export function Products({ token, store }: { token: string; store: any }) {
       featured: !!p.featured,
       stock: String(p.stock),
       categoryId: p.categoryId ?? "",
+      sku: p.sku ?? "",
+      barcode: p.barcode ?? "",
+      costPrice: p.costPrice ? String(p.costPrice) : "",
+      weightGrams: p.weightGrams ? String(p.weightGrams) : "",
+      brand: p.brand ?? "",
+      tags: ((p.tags as string[]) ?? []).join("، "),
+      minQty: String(p.minQty ?? 1),
+      maxQty: p.maxQty ? String(p.maxQty) : "",
+      seoDescription: p.seoDescription ?? "",
       variants: (p.variants ?? []).map((v: any) => ({
         id: v.id,
         name: v.name,
@@ -94,6 +112,18 @@ export function Products({ token, store }: { token: string; store: any }) {
       featured: form.featured,
       stock: Number(form.stock) || 0,
       categoryId: form.categoryId || undefined,
+      sku: form.sku.trim() || null,
+      barcode: form.barcode.trim() || null,
+      costPrice: form.costPrice ? Number(form.costPrice) : null,
+      weightGrams: form.weightGrams ? Number(form.weightGrams) : null,
+      brand: form.brand.trim() || null,
+      tags: form.tags
+        .split(/[,،]/)
+        .map((t) => t.trim())
+        .filter(Boolean),
+      minQty: Math.max(1, Number(form.minQty) || 1),
+      maxQty: form.maxQty ? Number(form.maxQty) : null,
+      seoDescription: form.seoDescription.trim() || null,
       variants: form.variants
         .filter((v) => v.name.trim())
         .map((v) => ({
@@ -400,6 +430,104 @@ export function Products({ token, store }: { token: string; store: any }) {
               منتج مميز ⭐ (يتصدّر واجهة المتجر)
             </label>
           </div>
+
+          {/* البيانات الكاملة (القسم 5.5) — مطوية كي لا تُثقل الإضافة السريعة */}
+          <details className="border rounded-xl p-3 bg-gray-50/50" open={!!(form.sku || form.brand || form.costPrice)}>
+            <summary className="cursor-pointer text-sm font-bold text-gray-700 select-none">
+              بيانات إضافية — SKU، التكلفة، الوزن، الماركة، الوسوم، حدود الكمية
+            </summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label className="block text-xs text-gray-600">
+                  رمز المنتج SKU
+                  <input
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    dir="ltr"
+                    value={form.sku}
+                    onChange={(e) => setForm({ ...form, sku: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600">
+                  الباركود
+                  <input
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    dir="ltr"
+                    value={form.barcode}
+                    onChange={(e) => setForm({ ...form, barcode: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600">
+                  سعر التكلفة (لا يظهر للزوار)
+                  <input
+                    type="number"
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    value={form.costPrice}
+                    onChange={(e) => setForm({ ...form, costPrice: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600">
+                  الوزن بالجرام
+                  <input
+                    type="number"
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    value={form.weightGrams}
+                    onChange={(e) => setForm({ ...form, weightGrams: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label className="block text-xs text-gray-600">
+                  الماركة / العلامة
+                  <input
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    value={form.brand}
+                    onChange={(e) => setForm({ ...form, brand: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600 col-span-1 md:col-span-3">
+                  وسوم للبحث (افصل بينها بفاصلة)
+                  <input
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    placeholder="بخور، هدايا، عود"
+                    value={form.tags}
+                    onChange={(e) => setForm({ ...form, tags: e.target.value })}
+                  />
+                </label>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <label className="block text-xs text-gray-600">
+                  أقل كمية للطلب
+                  <input
+                    type="number"
+                    min={1}
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    value={form.minQty}
+                    onChange={(e) => setForm({ ...form, minQty: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600">
+                  أقصى كمية لكل طلب
+                  <input
+                    type="number"
+                    min={1}
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    placeholder="بلا حد"
+                    value={form.maxQty}
+                    onChange={(e) => setForm({ ...form, maxQty: e.target.value })}
+                  />
+                </label>
+                <label className="block text-xs text-gray-600 col-span-2">
+                  وصف محركات البحث SEO (يظهر في نتائج جوجل)
+                  <input
+                    className="border rounded-lg px-3 py-2 w-full mt-1 bg-white"
+                    maxLength={300}
+                    value={form.seoDescription}
+                    onChange={(e) => setForm({ ...form, seoDescription: e.target.value })}
+                  />
+                </label>
+              </div>
+            </div>
+          </details>
           <button
             onClick={save}
             disabled={busy || uploading}

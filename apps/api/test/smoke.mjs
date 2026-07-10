@@ -79,7 +79,7 @@ test("الطلب: idempotency لا يكرر، والكوبون الوهمي يُ
     neighborhood: "حي الاختبار",
     addressDetails: "بجانب مبنى الاختبار",
     idempotencyKey: `smoke-${Date.now()}`,
-    items: [{ productId: product.id, quantity: 1 }],
+    items: [{ productId: product.id, quantity: product.minQty ?? 1 }],
   };
   const first = await call("/public/stores/alafia/orders", {
     method: "POST",

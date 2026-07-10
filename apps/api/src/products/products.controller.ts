@@ -9,6 +9,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import {
+  IsArray,
   IsBoolean,
   IsIn,
   IsInt,
@@ -16,6 +17,7 @@ import {
   IsNumber,
   IsOptional,
   IsString,
+  MaxLength,
   Min,
 } from "class-validator";
 import { AuthUser, CurrentUser, JwtAuthGuard } from "../auth/jwt.guard";
@@ -51,6 +53,49 @@ class CreateProductDto {
   @IsOptional()
   @IsBoolean()
   featured?: boolean;
+
+  // ---- بيانات المنتج الكاملة (القسم 5.5) ----
+  @IsOptional()
+  @IsString()
+  sku?: string | null;
+
+  @IsOptional()
+  @IsString()
+  barcode?: string | null;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  costPrice?: number | null;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  weightGrams?: number | null;
+
+  @IsOptional()
+  @IsString()
+  brand?: string | null;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  minQty?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  maxQty?: number | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  seoDescription?: string | null;
 
   @IsOptional()
   @IsInt()

@@ -167,7 +167,12 @@ export default async function StoreLayout({
             )}
 
             <div className="flex items-center justify-between gap-3 flex-wrap border-t border-white/10 pt-4 text-xs text-white/50">
-              <span>© {new Date().getFullYear()} {store.name}</span>
+              <span className="inline-flex items-center gap-3">
+                © {new Date().getFullYear()} {store.name}
+                <Link href="/my-orders" className="hover:text-white/80 underline underline-offset-2">
+                  طلباتي
+                </Link>
+              </span>
               <Link href="/" className="inline-flex items-center gap-1.5 hover:text-white/80">
                 <QamariyaMark size={16} /> متجر يعمل بمنصة مُعين
               </Link>

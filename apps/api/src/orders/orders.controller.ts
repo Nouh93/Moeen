@@ -111,6 +111,14 @@ export class OrdersController {
     return this.orders.track(code.toUpperCase());
   }
 
+  // ---- المشتري: «طلباتي» عبر كل المتاجر (القسم 6.4) ----
+
+  @UseGuards(JwtAuthGuard)
+  @Get("me/orders")
+  myOrders(@CurrentUser() u: AuthUser) {
+    return this.orders.forCustomer(u.phone);
+  }
+
   // ---- التاجر ----
 
   @UseGuards(JwtAuthGuard)

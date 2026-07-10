@@ -303,6 +303,19 @@ export class OrdersService {
     };
   }
 
+  /** طلبات المشتري عبر كل المتاجر — صفحة «طلباتي» (القسم 6.4) */
+  forCustomer(phone: string) {
+    return this.prisma.order.findMany({
+      where: { customerPhone: phone },
+      orderBy: { createdAt: "desc" },
+      take: 50,
+      include: {
+        items: true,
+        store: { select: { name: true, slug: true, currency: true, logoUrl: true } },
+      },
+    });
+  }
+
   // ---- نقاط نهاية التاجر ----
 
   async list(

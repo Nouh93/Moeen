@@ -20,7 +20,7 @@ COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/api/node_modules ./apps/api/node_modules
 COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/apps/api/prisma ./apps/api/prisma
-COPY --from=build /app/apps/api/package.json ./apps/api/
+COPY --from=build /app/apps/api/package.json /app/apps/api/tsconfig.json ./apps/api/
 WORKDIR /app/apps/api
 EXPOSE 4000
 # تُطبَّق الهجرات عند الإقلاع ثم يبدأ الخادم

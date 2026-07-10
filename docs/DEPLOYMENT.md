@@ -23,7 +23,8 @@ openssl rand -hex 32   # → PAYMENTS_WEBHOOK_SECRET
 nano .env              # واملأ WEB_URL و API_PUBLIC_URL
 
 docker compose -f docker-compose.prod.yml up -d --build
-docker compose -f docker-compose.prod.yml exec api npx ts-node -T prisma/seed.ts
+# البذر (مرة واحدة) — مرّر رقمك ليكون حساب المدير:
+docker compose -f docker-compose.prod.yml exec -e ADMIN_PHONE=+9677XXXXXXXX api node dist/prisma/seed.js
 curl http://127.0.0.1:4000/health   # {"ok":true,...}
 ```
 

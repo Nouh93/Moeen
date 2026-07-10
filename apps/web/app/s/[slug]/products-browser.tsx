@@ -139,11 +139,24 @@ export function ProductsBrowser({
               <div className="p-3">
                 <div className="font-semibold text-sm leading-snug line-clamp-2">{p.name}</div>
                 <div className="mt-2 flex items-center gap-2 flex-wrap">
-                  <span className="text-[var(--sf-700)] font-bold">{formatPrice(p.price, currency)}</span>
-                  {p.compareAtPrice && (
-                    <span className="text-xs text-gray-400 line-through">
-                      {formatPrice(p.compareAtPrice, currency)}
-                    </span>
+                  <span className="text-[var(--sf-700)] font-bold">
+                    {formatPrice(p.offerPercent ? p.offerPrice : p.price, currency)}
+                  </span>
+                  {p.offerPercent ? (
+                    <>
+                      <span className="text-xs text-gray-400 line-through">
+                        {formatPrice(p.price, currency)}
+                      </span>
+                      <span className="text-[11px] bg-rose-500 text-white rounded-full px-1.5 py-0.5 font-bold">
+                        -{p.offerPercent}%
+                      </span>
+                    </>
+                  ) : (
+                    p.compareAtPrice && (
+                      <span className="text-xs text-gray-400 line-through">
+                        {formatPrice(p.compareAtPrice, currency)}
+                      </span>
+                    )
                   )}
                 </div>
                 {p.trackStock && p.stock <= 3 && p.stock > 0 && (

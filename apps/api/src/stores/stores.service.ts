@@ -5,6 +5,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
+import { bestOfferPercent } from "../offers/offer-logic";
 import { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
@@ -145,7 +146,7 @@ export class StoresService {
     }
 
     // شارات الثقة والشفافية (القسمان 25.1 و25.3)
-    const [rating, delivered, total] = await Promise.all([
+    const [rating, delivered, total, offers] = await Promise.all([
       this.prisma.review.aggregate({
         where: { storeId: store.id, status: "VISIBLE" },
         _avg: { rating: true },
@@ -154,6 +155,13 @@ export class StoresService {
       this.prisma.order.count({ where: { storeId: store.id, status: "DELIVERED" } }),
       this.prisma.order.count({
         where: { storeId: store.id, status: { in: ["DELIVERED", "CANCELLED", "RETURNED"] } },
+      }),
+      this.prisma.offer.findMany({
+        where: {
+          storeId: store.id,
+          active: true,
+          OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+        },
       }),
     ]);
     const completionRate = total > 0 ? delivered / total : 1;
@@ -166,9 +174,25 @@ export class StoresService {
       rating._count >= 5 &&
       completionRate >= 0.85;
 
+    // العروض التلقائية (القسم 9.3): سعر بعد الخصم لكل منتج مشمول
+    const productsWithOffers = store.products.map((p) => {
+      const percent = bestOfferPercent(offers, p.categoryId);
+      if (!percent) return p;
+      const title = offers
+        .filter((o) => (!o.categoryId || o.categoryId === p.categoryId) && o.percent === percent)
+        .map((o) => o.title)[0];
+      return {
+        ...p,
+        offerPercent: percent,
+        offerTitle: title,
+        offerPrice: Number(p.price) * (1 - percent / 100),
+      };
+    });
+
     const { ownerId, ...pub } = store;
     return {
       ...pub,
+      products: productsWithOffers,
       badges: {
         verified: store.kycLevel >= 1, // «هوية موثّقة» ✓ (25.1.3)
         trusted,

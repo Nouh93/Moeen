@@ -22,6 +22,7 @@ import { Overview } from "./components/overview";
 import { Orders } from "./components/orders";
 import { Products } from "./components/products";
 import { Coupons } from "./components/coupons";
+import { Offers } from "./components/offers";
 import { Settings } from "./components/settings";
 import { Subscription } from "./components/subscription";
 import { Reviews } from "./components/reviews";
@@ -171,7 +172,7 @@ const TABS = [
   ["products", "المنتجات", ShoppingBag],
   ["reports", "التقارير", BarChart3],
   ["customers", "العملاء", Users],
-  ["coupons", "الكوبونات", TicketPercent],
+  ["coupons", "التسويق", TicketPercent],
   ["reviews", "التقييمات", Star],
   ["subscription", "الاشتراك", CreditCard],
   ["settings", "الإعدادات", SettingsIcon],
@@ -294,7 +295,12 @@ function Panel({ token, onLogout }: { token: string; onLogout: () => void }) {
         {tab === "products" && <Products token={token} store={store} />}
         {tab === "reports" && <Reports token={token} store={store} />}
         {tab === "customers" && <Customers token={token} store={store} />}
-        {tab === "coupons" && <Coupons token={token} store={store} />}
+        {tab === "coupons" && (
+          <>
+            <Coupons token={token} store={store} />
+            <Offers token={token} store={store} />
+          </>
+        )}
         {tab === "reviews" && <Reviews token={token} store={store} />}
         {tab === "subscription" && <Subscription token={token} store={store} onChanged={load} />}
         {tab === "settings" && <Settings token={token} store={store} onSaved={load} />}

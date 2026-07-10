@@ -14,6 +14,7 @@ import { CartsService } from "../carts/carts.module";
 import { CouponsService } from "../coupons/coupons.service";
 import { NotificationsService } from "../notifications/notifications.service";
 import { TEMPLATES } from "../notifications/templates";
+import { bestOfferPercent } from "../offers/offer-logic";
 import { PrismaService } from "../prisma/prisma.service";
 import { StoresService } from "../stores/stores.service";
 
@@ -102,14 +103,24 @@ export class OrdersService {
       if (existing) return { order: existing, duplicate: true };
     }
 
-    const products = await this.prisma.product.findMany({
-      where: {
-        id: { in: data.items.map((i) => i.productId) },
-        storeId: store.id,
-        status: "ACTIVE",
-      },
-      include: { variants: true },
-    });
+    const [products, offers] = await Promise.all([
+      this.prisma.product.findMany({
+        where: {
+          id: { in: data.items.map((i) => i.productId) },
+          storeId: store.id,
+          status: "ACTIVE",
+        },
+        include: { variants: true },
+      }),
+      // العروض التلقائية السارية — تُطبَّق هنا حصراً (السعر النهائي من الخادم دائماً)
+      this.prisma.offer.findMany({
+        where: {
+          storeId: store.id,
+          active: true,
+          OR: [{ endsAt: null }, { endsAt: { gt: new Date() } }],
+        },
+      }),
+    ]);
     const byId = new Map(products.map((p) => [p.id, p]));
 
     let subtotal = new Prisma.Decimal(0);
@@ -137,7 +148,11 @@ export class OrdersService {
           `الكمية المطلوبة من "${product.name}" غير متوفرة — المتبقي ${product.stock}`,
         );
       }
-      const unitPrice = variant?.price ?? product.price;
+      let unitPrice = variant?.price ?? product.price;
+      const offerPercent = bestOfferPercent(offers, product.categoryId);
+      if (offerPercent > 0) {
+        unitPrice = unitPrice.mul(100 - offerPercent).div(100).toDecimalPlaces(2);
+      }
       subtotal = subtotal.add(unitPrice.mul(qty));
       return {
         productId: product.id,

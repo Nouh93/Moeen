@@ -16,6 +16,7 @@ import { AdminModule } from "./admin/admin.module";
 import { KycModule } from "./kyc/kyc.module";
 import { ReviewsModule } from "./reviews/reviews.module";
 import { CartsModule } from "./carts/carts.module";
+import { OffersModule } from "./offers/offers.module";
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { CartsModule } from "./carts/carts.module";
     KycModule,
     ReviewsModule,
     CartsModule,
+    OffersModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })

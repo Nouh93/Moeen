@@ -109,6 +109,7 @@ model Store {
   orders        Order[]
   categories    Category[]
   coupons       Coupon[]
+  offers        Offer[]
   shippingRates ShippingRate[]
   notifications Notification[]
   invoices      Invoice[]
@@ -307,8 +308,25 @@ model Category {
   name      String
   sortOrder Int       @default(0)
   products  Product[]
+  offers    Offer[]
 
   @@unique([storeId, name])
+}
+
+// عرض تلقائي (القسم 9.3): خصم بنسبة يسري بلا كوبون — على كل المتجر أو تصنيف واحد
+model Offer {
+  id         String    @id @default(cuid())
+  store      Store     @relation(fields: [storeId], references: [id])
+  storeId    String
+  title      String
+  percent    Int // 1..90
+  category   Category? @relation(fields: [categoryId], references: [id])
+  categoryId String? // فارغ = كل المتجر
+  endsAt     DateTime? // فارغ = مفتوح حتى الإيقاف
+  active     Boolean   @default(true)
+  createdAt  DateTime  @default(now())
+
+  @@index([storeId, active])
 }
 
 // أسعار الشحن لكل محافظة (القسم 8.2) — والافتراضي Store.shippingFee

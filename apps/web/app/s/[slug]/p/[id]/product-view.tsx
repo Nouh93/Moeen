@@ -22,7 +22,10 @@ export function ProductView({
   const variant = variants.find((v) => v.id === variantId);
   const [added, setAdded] = useState(false);
 
-  const price = variant?.price ?? product.price;
+  const basePrice = variant?.price ?? product.price;
+  const offerPercent: number = product.offerPercent ?? 0;
+  // السعر المعروض بعد العرض التلقائي — الخادم يعيد الحساب عند إنشاء الطلب
+  const price = offerPercent ? Number(basePrice) * (1 - offerPercent / 100) : basePrice;
   const outOfStock = variant
     ? variant.stock === 0
     : product.trackStock && product.stock === 0;
@@ -81,7 +84,17 @@ export function ProductView({
           <span className="text-3xl font-bold text-[var(--sf-700)]">
             {formatPrice(price, store.currency)}
           </span>
-          {product.compareAtPrice && !variant?.price && (
+          {offerPercent > 0 && (
+            <>
+              <span className="text-lg text-gray-400 line-through">
+                {formatPrice(basePrice, store.currency)}
+              </span>
+              <span className="text-xs bg-rose-500 text-white rounded-full px-2 py-1 font-bold">
+                خصم {offerPercent}%{product.offerTitle ? ` — ${product.offerTitle}` : ""}
+              </span>
+            </>
+          )}
+          {!offerPercent && product.compareAtPrice && !variant?.price && (
             <span className="text-lg text-gray-400 line-through">
               {formatPrice(product.compareAtPrice, store.currency)}
             </span>

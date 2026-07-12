@@ -2,8 +2,12 @@
  * Service Worker — أساس PWA (القسم 22.1 بالملحق):
  * - الأصول الثابتة والصور: cache-first (تُعرض حتى بدون إنترنت بعد أول تحميل)
  * - الصفحات: network-first مع الرجوع للنسخة المخزنة عند الانقطاع
+ *
+ * قاعدة ذهبية: لا تُخزَّن أبداً استجابة غير ناجحة — تخزين 404 لملف
+ * سكربت أثناء لحظة نشر يقتل تفاعل الصفحة للأبد على جهاز الزائر.
+ * رفع رقم النسخة يمسح الكاش القديم من كل الأجهزة عند أول زيارة.
  */
-const CACHE = "moeen-v1";
+const CACHE = "moeen-v2";
 
 self.addEventListener("install", (event) => {
   self.skipWaiting();
@@ -40,8 +44,10 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ||
           fetch(request).then((res) => {
-            const copy = res.clone();
-            caches.open(CACHE).then((c) => c.put(request, copy));
+            if (res.ok) {
+              const copy = res.clone();
+              caches.open(CACHE).then((c) => c.put(request, copy));
+            }
             return res;
           }),
       ),
@@ -54,8 +60,10 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(
       fetch(request)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(request, copy));
+          if (res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(request, copy));
+          }
           return res;
         })
         .catch(() => caches.match(request)),

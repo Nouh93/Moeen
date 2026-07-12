@@ -88,6 +88,24 @@ export class OrdersService {
       throw new NotFoundException("المتجر غير موجود أو موقوف حالياً");
     }
 
+    // وضع الإجازة (القسم 7.5): المتجر ظاهر لكن الطلبات موقوفة برسالة التاجر
+    if (store.vacationMode) {
+      throw new BadRequestException(
+        store.vacationMessage?.trim() ||
+          "المتجر في إجازة قصيرة — نستقبل طلبك قريباً بإذن الله",
+      );
+    }
+
+    // العميل المحظور (القسم 7.6) — رسالة مهذبة لا تكشف الحظر صراحةً
+    const isBlocked = await this.prisma.blockedCustomer.findUnique({
+      where: { storeId_phone: { storeId: store.id, phone } },
+    });
+    if (isBlocked) {
+      throw new BadRequestException(
+        "تعذّر إتمام الطلب حالياً — تواصل مع المتجر مباشرة لإتمام طلبك",
+      );
+    }
+
     // idempotency: إعادة إرسال نفس الطلب (بعد انقطاع الإنترنت) لا تنشئ طلباً جديداً
     // — القسم 22.1.2 بالملحق
     if (data.idempotencyKey) {
@@ -173,6 +191,13 @@ export class OrdersService {
         quantity: qty,
       };
     });
+
+    // الحد الأدنى لقيمة الطلب (القسم 7.5) — قبل الشحن وبعد العروض
+    if (store.minOrderTotal && subtotal.lt(store.minOrderTotal)) {
+      throw new BadRequestException(
+        `الحد الأدنى للطلب من هذا المتجر ${Number(store.minOrderTotal).toLocaleString("ar-u-nu-latn")} — أضف منتجات أخرى لإتمام طلبك`,
+      );
+    }
 
     const shippingFee = await this.computeShipping(
       store,
@@ -462,5 +487,28 @@ export class OrdersService {
       });
       return updated;
     });
+  }
+
+  /**
+   * تحديث حالة مجموعة طلبات دفعة واحدة (القسم 7.7).
+   * كل طلب يمر بنفس تحققات التحديث المنفرد؛ ما لا تسمح حالته بالانتقال يُتخطى ويُبلَّغ عنه.
+   */
+  async bulkUpdateStatus(
+    storeId: string,
+    ownerId: string,
+    orderIds: string[],
+    status: OrderStatus,
+  ) {
+    await this.stores.ownedByOrThrow(storeId, ownerId);
+    const results = { updated: 0, skipped: [] as { id: string; reason: string }[] };
+    for (const orderId of orderIds.slice(0, 100)) {
+      try {
+        await this.updateStatus(storeId, ownerId, orderId, status);
+        results.updated += 1;
+      } catch (e: any) {
+        results.skipped.push({ id: orderId, reason: e.message ?? "خطأ" });
+      }
+    }
+    return results;
   }
 }

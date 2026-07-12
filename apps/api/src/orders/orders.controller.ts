@@ -25,6 +25,16 @@ import { ORDER_STATUSES, OrderStatus } from "@moeen/shared";
 import { AuthUser, CurrentUser, JwtAuthGuard } from "../auth/jwt.guard";
 import { OrdersService } from "./orders.service";
 
+class BulkStatusDto {
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  orderIds: string[];
+
+  @IsIn(ORDER_STATUSES as unknown as string[])
+  status: OrderStatus;
+}
+
 class CheckoutItemDto {
   @IsString()
   @IsNotEmpty()
@@ -145,6 +155,16 @@ export class OrdersController {
     @Param("orderId") orderId: string,
   ) {
     return this.orders.getOne(storeId, u.sub, orderId);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Patch("stores/:storeId/orders/bulk-status")
+  bulkStatus(
+    @CurrentUser() u: AuthUser,
+    @Param("storeId") storeId: string,
+    @Body() dto: BulkStatusDto,
+  ) {
+    return this.orders.bulkUpdateStatus(storeId, u.sub, dto.orderIds, dto.status);
   }
 
   @UseGuards(JwtAuthGuard)

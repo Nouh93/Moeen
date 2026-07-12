@@ -23,6 +23,10 @@ export function Settings({
     logoUrl: store.logoUrl ?? "",
     shippingFee: String(store.shippingFee),
     freeShippingAbove: store.freeShippingAbove ? String(store.freeShippingAbove) : "",
+    minOrderTotal: store.minOrderTotal ? String(store.minOrderTotal) : "",
+    vacationMode: !!store.vacationMode,
+    vacationMessage: store.vacationMessage ?? "",
+    thankYouNote: store.thankYouNote ?? "",
   });
   const [msg, setMsg] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -67,6 +71,10 @@ export function Settings({
           logoUrl: form.logoUrl || undefined,
           shippingFee: Number(form.shippingFee) || 0,
           freeShippingAbove: form.freeShippingAbove ? Number(form.freeShippingAbove) : undefined,
+          minOrderTotal: form.minOrderTotal ? Number(form.minOrderTotal) : null,
+          vacationMode: form.vacationMode,
+          vacationMessage: form.vacationMessage.trim() || null,
+          thankYouNote: form.thankYouNote.trim() || null,
         }),
       });
       setMsg("حُفظت الإعدادات ✓");
@@ -175,6 +183,49 @@ export function Settings({
             />
           </label>
         </div>
+        {/* إعدادات الطلبات (القسم 7.5) */}
+        <div className="border-t pt-3 space-y-3">
+          <h4 className="font-bold text-sm">إعدادات الطلبات</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block text-sm text-gray-600">
+              حد أدنى لقيمة الطلب (اختياري)
+              <input
+                type="number"
+                className="border rounded-lg px-3 py-2.5 w-full mt-1"
+                placeholder="مثال: 5000"
+                value={form.minOrderTotal}
+                onChange={(e) => setForm({ ...form, minOrderTotal: e.target.value })}
+              />
+            </label>
+            <label className="block text-sm text-gray-600">
+              رسالة شكر بعد الطلب (اختياري)
+              <input
+                className="border rounded-lg px-3 py-2.5 w-full mt-1"
+                placeholder="مثال: شكراً لثقتك — طلبك يوصلك بإذن الله"
+                value={form.thankYouNote}
+                onChange={(e) => setForm({ ...form, thankYouNote: e.target.value })}
+              />
+            </label>
+          </div>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={form.vacationMode}
+              onChange={(e) => setForm({ ...form, vacationMode: e.target.checked })}
+            />
+            <span className="font-semibold">وضع الإجازة</span>
+            <span className="text-gray-500 text-xs">— المتجر يظهر لكن استقبال الطلبات يتوقف مؤقتاً</span>
+          </label>
+          {form.vacationMode && (
+            <input
+              className="border rounded-lg px-3 py-2.5 w-full"
+              placeholder="رسالة للزوار (مثال: في إجازة العيد — نعود السبت)"
+              value={form.vacationMessage}
+              onChange={(e) => setForm({ ...form, vacationMessage: e.target.value })}
+            />
+          )}
+        </div>
+
         <button onClick={save} className="bg-brand-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-brand-700">
           حفظ ✓
         </button>

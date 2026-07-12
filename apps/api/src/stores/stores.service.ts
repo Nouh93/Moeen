@@ -106,6 +106,10 @@ export class StoresService {
         tiktok?: string;
         x?: string;
       };
+      minOrderTotal: number | null;
+      vacationMode: boolean;
+      vacationMessage: string | null;
+      thankYouNote: string | null;
     }>,
   ) {
     await this.ownedByOrThrow(storeId, ownerId);
@@ -373,9 +377,42 @@ export class StoresService {
     return { days, topProducts, byGovernorate };
   }
 
+  // ---- حظر العملاء (القسم 7.6): درع التاجر ضد طلبات COD الوهمية ----
+
+  async listBlocked(storeId: string, ownerId: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    return this.prisma.blockedCustomer.findMany({
+      where: { storeId },
+      orderBy: { createdAt: "desc" },
+    });
+  }
+
+  async blockCustomer(storeId: string, ownerId: string, phone: string, reason?: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    return this.prisma.blockedCustomer.upsert({
+      where: { storeId_phone: { storeId, phone } },
+      create: { storeId, phone, reason },
+      update: { reason },
+    });
+  }
+
+  async unblockCustomer(storeId: string, ownerId: string, phone: string) {
+    await this.ownedByOrThrow(storeId, ownerId);
+    await this.prisma.blockedCustomer.deleteMany({ where: { storeId, phone } });
+    return { ok: true };
+  }
+
   /** عملاء المتجر (القسم 11.3): تجميع من الطلبات — عدد الطلبات والإنفاق وآخر طلب */
   async customers(storeId: string, ownerId: string) {
     await this.ownedByOrThrow(storeId, ownerId);
+    const blocked = new Set(
+      (
+        await this.prisma.blockedCustomer.findMany({
+          where: { storeId },
+          select: { phone: true },
+        })
+      ).map((b) => b.phone),
+    );
     const orders = await this.prisma.order.findMany({
       where: { storeId },
       orderBy: { createdAt: "desc" },
@@ -411,6 +448,8 @@ export class StoresService {
         });
       }
     }
-    return [...map.values()].sort((a, b) => b.spent - a.spent);
+    return [...map.values()]
+      .map((c) => ({ ...c, blocked: blocked.has(c.phone) }))
+      .sort((a, b) => b.spent - a.spent);
   }
 }

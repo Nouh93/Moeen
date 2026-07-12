@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, ImageIcon, Images, Pencil, Plus, X } from "lucide-react";
+import { Camera, Download, ImageIcon, Images, Pencil, Plus, Upload, X } from "lucide-react";
 import { api, formatPrice, imgUrl, uploadFile } from "@/lib/api";
 
 const EMPTY_FORM = {
@@ -37,6 +37,7 @@ export function Products({ token, store }: { token: string; store: any }) {
   const [uploading, setUploading] = useState(false);
   const [newCategory, setNewCategory] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const csvRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(() => {
     api<any[]>(`/stores/${store.id}/products`, { token }).then(setProducts).catch((e) => setError(e.message));
@@ -165,6 +166,111 @@ export function Products({ token, store }: { token: string; store: any }) {
     load();
   }
 
+  // ---- استيراد وتصدير CSV (القسم 5.6) ----
+
+  const CSV_HEADERS = ["الاسم", "الوصف", "السعر", "السعر قبل الخصم", "SKU", "الباركود", "الماركة", "الوسوم", "المخزون", "تتبع المخزون", "مميز"];
+
+  function exportCsv() {
+    const rows = [
+      CSV_HEADERS,
+      ...(products ?? []).map((p) => [
+        p.name,
+        p.description ?? "",
+        p.price,
+        p.compareAtPrice ?? "",
+        p.sku ?? "",
+        p.barcode ?? "",
+        p.brand ?? "",
+        ((p.tags as string[]) ?? []).join("، "),
+        p.stock,
+        p.trackStock ? "نعم" : "لا",
+        p.featured ? "نعم" : "لا",
+      ]),
+    ];
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `products-${store.slug}.csv`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  /** محلّل CSV بسيط يدعم الحقول المقتبسة والفواصل داخلها */
+  function parseCsv(text: string): string[][] {
+    const rows: string[][] = [];
+    let row: string[] = [], cell = "", inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (inQuotes) {
+        if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; }
+        else if (ch === '"') inQuotes = false;
+        else cell += ch;
+      } else if (ch === '"') inQuotes = true;
+      else if (ch === ",") { row.push(cell); cell = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(cell); cell = "";
+        if (row.some((c) => c.trim())) rows.push(row);
+        row = [];
+      } else cell += ch;
+    }
+    row.push(cell);
+    if (row.some((c) => c.trim())) rows.push(row);
+    return rows;
+  }
+
+  async function importCsv(file: File) {
+    setError("");
+    const text = (await file.text()).replace(/^﻿/, "");
+    const rows = parseCsv(text);
+    if (rows.length < 2) {
+      setError("الملف فارغ — الصف الأول عناوين والبقية منتجات");
+      return;
+    }
+    const idx = Object.fromEntries(rows[0].map((h, i) => [h.trim(), i]));
+    if (idx["الاسم"] === undefined || idx["السعر"] === undefined) {
+      setError('الملف يحتاج على الأقل عمودَي "الاسم" و"السعر" — صدّر ملفاً من هنا واستخدمه كقالب');
+      return;
+    }
+    const get = (r: string[], k: string) => (idx[k] !== undefined ? (r[idx[k]] ?? "").trim() : "");
+    const items = rows.slice(1).map((r) => ({
+      name: get(r, "الاسم"),
+      description: get(r, "الوصف") || undefined,
+      price: Number(get(r, "السعر")) || 0,
+      compareAtPrice: get(r, "السعر قبل الخصم") ? Number(get(r, "السعر قبل الخصم")) : undefined,
+      sku: get(r, "SKU") || undefined,
+      barcode: get(r, "الباركود") || undefined,
+      brand: get(r, "الماركة") || undefined,
+      tags: get(r, "الوسوم") ? get(r, "الوسوم").split(/[,،]/).map((t) => t.trim()).filter(Boolean) : undefined,
+      stock: Number(get(r, "المخزون")) || 0,
+      trackStock: get(r, "تتبع المخزون") === "نعم",
+      featured: get(r, "مميز") === "نعم",
+    }));
+    setBusy(true);
+    try {
+      const res: any = await api(`/stores/${store.id}/products/import`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ products: items }),
+      });
+      setError(
+        res.skipped?.length
+          ? `استُورد ${res.created} منتجاً — وتُخطي ${res.skipped.length}: ${res.skipped
+              .slice(0, 3)
+              .map((s: any) => `${s.name} (${s.reason})`)
+              .join("، ")}${res.skipped.length > 3 ? "..." : ""}`
+          : `استُورد ${res.created} منتجاً بنجاح ✓`,
+      );
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function addCategory() {
     if (!newCategory.trim()) return;
     await api(`/stores/${store.id}/categories`, {
@@ -211,9 +317,36 @@ export function Products({ token, store }: { token: string; store: any }) {
         </div>
       </div>
 
-      <button onClick={openNew} className="bg-brand-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-brand-700 inline-flex items-center gap-1.5">
-        <Plus size={18} /> أضف منتجاً
-      </button>
+      <div className="flex items-center gap-2 flex-wrap">
+        <button onClick={openNew} className="bg-brand-600 text-white rounded-xl px-5 py-2.5 font-bold hover:bg-brand-700 inline-flex items-center gap-1.5">
+          <Plus size={18} /> أضف منتجاً
+        </button>
+        <button
+          onClick={exportCsv}
+          className="border rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 inline-flex items-center gap-1.5"
+          title="نزّل منتجاتك كملف CSV — يصلح قالباً للاستيراد"
+        >
+          <Download size={15} /> تصدير CSV
+        </button>
+        <button
+          onClick={() => csvRef.current?.click()}
+          disabled={busy}
+          className="border rounded-xl px-4 py-2.5 text-sm font-semibold hover:bg-gray-50 inline-flex items-center gap-1.5 disabled:opacity-50"
+          title="ارفع ملف CSV بمنتجاتك — صدّر أولاً لتأخذ القالب"
+        >
+          <Upload size={15} /> استيراد CSV
+        </button>
+        <input
+          ref={csvRef}
+          type="file"
+          accept=".csv,text/csv"
+          className="hidden"
+          onChange={(e) => {
+            if (e.target.files?.[0]) importCsv(e.target.files[0]);
+            e.target.value = "";
+          }}
+        />
+      </div>
 
       {/* نموذج إضافة/تعديل */}
       {editing !== null && (

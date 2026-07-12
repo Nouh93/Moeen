@@ -99,6 +99,15 @@ model Store {
   returnPolicy  String?
   // روابط التواصل {instagram, facebook, tiktok, x}
   socialLinks   Json         @default("{}")
+  // ---- إعدادات الطلبات (القسم 7.5) ----
+  // حد أدنى لقيمة الطلب — يحمي من طلبات COD غير المجدية
+  minOrderTotal Decimal?     @db.Decimal(12, 2)
+  // وضع الإجازة: المتجر يظهر لكن استقبال الطلبات موقوف برسالة مهذبة
+  vacationMode  Boolean      @default(false)
+  vacationMessage String?
+  // رسالة شكر تظهر للعميل بعد إتمام الطلب
+  thankYouNote  String?
+  blockedCustomers BlockedCustomer[]
   owner         User         @relation(fields: [ownerId], references: [id])
   ownerId       String
   governorate   Governorate? @relation(fields: [governorateId], references: [id])
@@ -311,6 +320,18 @@ model Category {
   offers    Offer[]
 
   @@unique([storeId, name])
+}
+
+// عميل محظور (القسم 7.6): رقم يتلاعب بطلبات COD — يُرفض طلبه برسالة مهذبة
+model BlockedCustomer {
+  id        String   @id @default(cuid())
+  store     Store    @relation(fields: [storeId], references: [id])
+  storeId   String
+  phone     String
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@unique([storeId, phone])
 }
 
 // عرض تلقائي (القسم 9.3): خصم بنسبة يسري بلا كوبون — على كل المتجر أو تصنيف واحد

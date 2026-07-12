@@ -139,6 +139,26 @@ class UpdateStoreDto {
   @Type(() => SocialLinksDto)
   socialLinks?: SocialLinksDto;
 
+  // ---- إعدادات الطلبات (القسم 7.5) ----
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minOrderTotal?: number | null;
+
+  @IsOptional()
+  @IsBoolean()
+  vacationMode?: boolean;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  vacationMessage?: string | null;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  thankYouNote?: string | null;
+
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -152,6 +172,17 @@ class UpdateStoreDto {
   @IsOptional()
   @IsBoolean()
   codConfirmation?: boolean;
+}
+
+class BlockCustomerDto {
+  @IsString()
+  @IsNotEmpty()
+  phone: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(200)
+  reason?: string;
 }
 
 class UpsertShippingRateDto {
@@ -211,6 +242,34 @@ export class StoresController {
   @Get("stores/:id/customers")
   customers(@CurrentUser() user: AuthUser, @Param("id") id: string) {
     return this.stores.customers(id, user.sub);
+  }
+
+  // ---- حظر العملاء (القسم 7.6) ----
+
+  @UseGuards(JwtAuthGuard)
+  @Get("stores/:id/blocked-customers")
+  listBlocked(@CurrentUser() user: AuthUser, @Param("id") id: string) {
+    return this.stores.listBlocked(id, user.sub);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post("stores/:id/blocked-customers")
+  block(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Body() dto: BlockCustomerDto,
+  ) {
+    return this.stores.blockCustomer(id, user.sub, dto.phone, dto.reason);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete("stores/:id/blocked-customers/:phone")
+  unblock(
+    @CurrentUser() user: AuthUser,
+    @Param("id") id: string,
+    @Param("phone") phone: string,
+  ) {
+    return this.stores.unblockCustomer(id, user.sub, phone);
   }
 
   // ---- أسعار الشحن ----

@@ -50,6 +50,8 @@ export function Orders({ token, store }: { token: string; store: any }) {
   const [q, setQ] = useState("");
   const [page, setPage] = useState(1);
   const [error, setError] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
 
   const load = useCallback(() => {
     const params = new URLSearchParams();
@@ -109,6 +111,40 @@ export function Orders({ token, store }: { token: string; store: any }) {
     }
   }
 
+  function toggleSelect(id: string) {
+    setSelected((s) => {
+      const next = new Set(s);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // تحديث حالة مجموعة طلبات دفعة واحدة (القسم 7.7)
+  async function bulkStatus(status: string) {
+    if (!selected.size) return;
+    setBulkBusy(true);
+    setError("");
+    try {
+      const res: any = await api(`/stores/${store.id}/orders/bulk-status`, {
+        method: "PATCH",
+        token,
+        body: JSON.stringify({ orderIds: [...selected], status }),
+      });
+      if (res.skipped?.length) {
+        setError(
+          `حُدّث ${res.updated} — وتُخطي ${res.skipped.length} (حالته لا تسمح بهذا الانتقال)`,
+        );
+      }
+      setSelected(new Set());
+      load();
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setBulkBusy(false);
+    }
+  }
+
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -144,6 +180,29 @@ export function Orders({ token, store }: { token: string; store: any }) {
       </div>
 
       {error && <div className="mb-3 bg-red-50 text-red-700 rounded-lg p-3 text-sm">{error}</div>}
+
+      {selected.size > 0 && (
+        <div className="mb-3 bg-brand-950 text-white rounded-xl px-4 py-2.5 flex items-center gap-3 flex-wrap">
+          <span className="text-sm font-bold">{selected.size} طلبات محددة</span>
+          <span className="text-xs text-white/60">حوّلها إلى:</span>
+          {(["PROCESSING", "OUT_FOR_DELIVERY", "DELIVERED", "CANCELLED"] as const).map((s) => (
+            <button
+              key={s}
+              disabled={bulkBusy}
+              onClick={() => bulkStatus(s)}
+              className="text-xs bg-white/15 hover:bg-white/25 rounded-lg px-3 py-1.5 font-semibold disabled:opacity-50"
+            >
+              {ORDER_STATUS_AR[s]}
+            </button>
+          ))}
+          <button
+            onClick={() => setSelected(new Set())}
+            className="mr-auto text-white/60 hover:text-white text-xs"
+          >
+            إلغاء التحديد ×
+          </button>
+        </div>
+      )}
       {!data ? (
         <div className="text-gray-500">جارٍ التحميل...</div>
       ) : data.orders.length === 0 ? (
@@ -156,9 +215,16 @@ export function Orders({ token, store }: { token: string; store: any }) {
             {data.orders.map((o) => {
               const next = ORDER_STATUS_TRANSITIONS[o.status as OrderStatus] ?? [];
               return (
-                <div key={o.id} className="card p-4">
+                <div key={o.id} className={`card p-4 ${selected.has(o.id) ? "ring-2 ring-brand-400" : ""}`}>
                   <div className="flex items-center justify-between flex-wrap gap-2">
                     <div className="flex items-center gap-2 flex-wrap">
+                      <input
+                        type="checkbox"
+                        className="w-4 h-4 accent-brand-600"
+                        checked={selected.has(o.id)}
+                        onChange={() => toggleSelect(o.id)}
+                        title="تحديد للإجراء الجماعي"
+                      />
                       <span className="font-mono font-bold">{o.code}</span>
                       <span className={`text-xs font-semibold rounded-full px-2.5 py-1 ${STATUS_BADGE[o.status]}`}>
                         {ORDER_STATUS_AR[o.status as OrderStatus]}

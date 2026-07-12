@@ -199,6 +199,11 @@ export default function CartPage({
             <PartyPopper size={40} strokeWidth={1.6} />
           </div>
           <h1 className="text-2xl font-bold mt-4">وصل طلبك بنجاح!</h1>
+          {store?.thankYouNote && (
+            <p className="mt-3 bg-amber-50 text-amber-800 rounded-xl px-4 py-3 text-sm leading-relaxed">
+              {store.thankYouNote}
+            </p>
+          )}
           <p className="text-gray-600 mt-2">
             سيتواصل معك المتجر لتأكيد الطلب. رمز التتبع:
           </p>
@@ -233,6 +238,18 @@ export default function CartPage({
 
       <div className="max-w-3xl mx-auto px-4 py-6">
         <h1 className="text-2xl font-bold mb-4 flex items-center gap-2"><ShoppingCart size={24} className="text-[var(--sf-600)]" /> سلتك وإتمام الطلب</h1>
+
+        {store?.vacationMode && (
+          <div className="bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm mb-4">
+            {store.vacationMessage?.trim() || "المتجر في إجازة قصيرة — نستقبل طلبك قريباً بإذن الله"}
+          </div>
+        )}
+        {store?.minOrderTotal && subtotal > 0 && subtotal < Number(store.minOrderTotal) && (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-xl px-4 py-3 text-sm mb-4">
+            الحد الأدنى للطلب {formatPrice(store.minOrderTotal, store.currency)} — أضف{" "}
+            {formatPrice(Number(store.minOrderTotal) - subtotal, store.currency)} لإتمام طلبك
+          </div>
+        )}
 
         {items.length === 0 ? (
           <p className="text-center text-gray-500 py-16">
@@ -412,7 +429,11 @@ export default function CartPage({
 
             <button
               onClick={() => submit()}
-              disabled={state.phase === "submitting"}
+              disabled={
+                state.phase === "submitting" ||
+                !!store?.vacationMode ||
+                !!(store?.minOrderTotal && subtotal < Number(store.minOrderTotal))
+              }
               className="mt-4 w-full bg-[var(--sf-600)] text-white rounded-xl py-4 text-lg font-bold hover:bg-[var(--sf-700)] disabled:opacity-60"
             >
               {state.phase === "submitting" ? "جارٍ إرسال طلبك..." : "تأكيد الطلب ✓"}

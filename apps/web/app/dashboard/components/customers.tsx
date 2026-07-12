@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MessageCircle, Search, Users } from "lucide-react";
+import { Ban, MessageCircle, Search, ShieldCheck, Users } from "lucide-react";
 import { api, formatPrice } from "@/lib/api";
 
 /** عملاء المتجر (القسم 11.3): مُجمَّعون من الطلبات، الأعلى إنفاقاً أولاً */
@@ -16,6 +16,24 @@ export function Customers({ token, store }: { token: string; store: any }) {
       .then(setCustomers)
       .catch((e) => setError(e.message));
   }, [token, store.id]);
+
+  // حظر/فك حظر عميل (القسم 7.6) — طلباته القادمة تُرفض برسالة مهذبة
+  async function toggleBlock(c: any) {
+    if (c.blocked) {
+      await api(`/stores/${store.id}/blocked-customers/${encodeURIComponent(c.phone)}`, {
+        method: "DELETE",
+        token,
+      });
+    } else {
+      const reason = window.prompt("سبب الحظر (اختياري — لك وحدك):") ?? undefined;
+      await api(`/stores/${store.id}/blocked-customers`, {
+        method: "POST",
+        token,
+        body: JSON.stringify({ phone: c.phone, ...(reason ? { reason } : {}) }),
+      });
+    }
+    api<any[]>(`/stores/${store.id}/customers`, { token }).then(setCustomers).catch(() => {});
+  }
 
   const visible = useMemo(() => {
     if (!customers) return null;
@@ -59,7 +77,14 @@ export function Customers({ token, store }: { token: string; store: any }) {
                 {c.name.trim().charAt(0) || "؟"}
               </div>
               <div className="flex-1 min-w-40">
-                <div className="font-semibold text-sm">{c.name}</div>
+                <div className="font-semibold text-sm flex items-center gap-1.5">
+                  {c.name}
+                  {c.blocked && (
+                    <span className="text-[11px] bg-red-100 text-red-600 rounded-full px-2 py-0.5 font-bold inline-flex items-center gap-1">
+                      <Ban size={10} /> محظور
+                    </span>
+                  )}
+                </div>
                 <div className="text-xs text-gray-500 font-mono" dir="ltr">{c.phone}</div>
               </div>
               <div className="text-center px-2">
@@ -89,6 +114,17 @@ export function Customers({ token, store }: { token: string; store: any }) {
               >
                 <MessageCircle size={16} />
               </a>
+              <button
+                onClick={() => toggleBlock(c)}
+                className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 ${
+                  c.blocked
+                    ? "bg-gray-200 text-gray-600 hover:bg-gray-300"
+                    : "bg-red-50 text-red-500 hover:bg-red-100"
+                }`}
+                title={c.blocked ? "فك الحظر — يستقبل طلباته من جديد" : "احظر هذا الرقم — طلباته القادمة تُرفض"}
+              >
+                {c.blocked ? <ShieldCheck size={16} /> : <Ban size={16} />}
+              </button>
             </div>
           ))}
         </div>

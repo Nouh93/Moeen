@@ -19,7 +19,9 @@ import {
   IsString,
   MaxLength,
   Min,
+  ValidateNested,
 } from "class-validator";
+import { Type } from "class-transformer";
 import { AuthUser, CurrentUser, JwtAuthGuard } from "../auth/jwt.guard";
 import { ProductsService } from "./products.service";
 
@@ -117,6 +119,13 @@ class CreateProductDto {
   variants?: { id?: string; name: string; price?: number; stock?: number }[];
 }
 
+class ImportProductsDto {
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateProductDto)
+  products: CreateProductDto[];
+}
+
 class UpdateProductDto extends CreateProductDto {
   @IsOptional()
   @IsString()
@@ -145,6 +154,28 @@ export class ProductsController {
     @Body() dto: CreateProductDto,
   ) {
     return this.products.create(storeId, u.sub, dto);
+  }
+
+  // استيراد منتجات دفعة واحدة من CSV (القسم 5.6) — كل صف يمر بتحققات الإنشاء نفسها
+  @Post("import")
+  async import(
+    @CurrentUser() u: AuthUser,
+    @Param("storeId") storeId: string,
+    @Body() dto: ImportProductsDto,
+  ) {
+    const results = { created: 0, skipped: [] as { name: string; reason: string }[] };
+    for (const row of dto.products.slice(0, 500)) {
+      try {
+        await this.products.create(storeId, u.sub, row);
+        results.created += 1;
+      } catch (e: any) {
+        const msg = Array.isArray(e?.response?.message)
+          ? e.response.message[0]
+          : (e.message ?? "خطأ");
+        results.skipped.push({ name: row.name ?? "بلا اسم", reason: msg });
+      }
+    }
+    return results;
   }
 
   @Patch(":id")
